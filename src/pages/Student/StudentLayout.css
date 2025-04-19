@@ -1,0 +1,18 @@
+.student-dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.dashboard-container {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 60px); /* Adjust based on the header height */
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: 250px; /* Same width as the sidebar to avoid overlap */
+  padding: 20px;
+  overflow-y: auto;
+}
