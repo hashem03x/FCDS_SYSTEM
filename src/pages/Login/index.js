@@ -1,7 +1,7 @@
 import {
   Checkbox,
   FormControlLabel,
-  Grid2,
+  Grid,
   TextField,
   Button,
 } from "@mui/material";
@@ -12,28 +12,34 @@ import login_bg_shapes from "../../assets/images/login_bg_shapes.png";
 import login_image from "../../assets/images/login_image.png";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.js";
+
 function Login() {
   const navigate = useNavigate();
   const [ID, setID] = useState("");
   const [password, setPassword] = useState("");
   const [isDisabled, setIsDisabled] = useState(true);
   const { login, isLoading } = useAuth();
+
   useEffect(() => {
-    ID !== "" && password !== "" ? setIsDisabled(false) : setIsDisabled(true);
+    setIsDisabled(!(ID && password));
   }, [password, ID]);
 
   return (
     <div style={{ height: "100vh" }}>
-      <Grid2
-        sx={{ height: "100%", position: "relative" }}
-        container
-        spacing={2}
-      >
-        <Grid2
-          size={6}
+      <Grid container sx={{ height: "100%" }}>
+        {/* Left Side (Image + Branding) */}
+        <Grid
+          item
+          xs={12}
+          md={6}
           sx={{
             position: "relative",
             backgroundColor: "rgba(131, 184, 253, 1)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            p: 2,
             "&::after": {
               content: '""',
               position: "absolute",
@@ -45,47 +51,51 @@ function Login() {
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
-              opacity: 0.2, // Adjust opacity here
+              opacity: 0.2,
               zIndex: 1,
             },
           }}
         >
-          <div style={{ zIndex: 2, position: "relative" }}>
-            <img
-              src={logo}
-              alt="Alexu Logo"
-              className="img-fluid"
-              width={180}
-            />
+          <div style={{ position: "relative", zIndex: 2 }}>
+            <img src={logo} alt="Alexu Logo" width={180} />
           </div>
           <div
-            className="position-absolute"
             style={{
               zIndex: 2,
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50% , -50%)",
+              position: "relative",
+              maxWidth: "100%",
+              width: "90%",
+              marginTop: "30px",
             }}
           >
-            <img src={login_image} alt="Login Image" width={500} height={500} />
+            <img
+              src={login_image}
+              alt="Login Illustration"
+              style={{ width: "100%", height: "auto", maxWidth: "500px" }}
+            />
           </div>
-        </Grid2>
-        <Grid2 size={6} sx={{ position: "relative" }}>
-          <div
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50% , -50%)",
-              width: "50%",
-            }}
-          >
-            <div style={{ textAlign: "left" }}>
+        </Grid>
+
+        {/* Right Side (Login Form) */}
+        <Grid
+          item
+          xs={12}
+          md={6}
+          sx={{
+            position: "relative",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            p: { xs: 4, md: 0 },
+          }}
+        >
+          <div style={{ width: "100%", maxWidth: "400px" }}>
+            <div style={{ textAlign: "left", marginBottom: "20px" }}>
               <p style={{ fontSize: "30px", fontWeight: "bold" }}>
                 Account Login
               </p>
             </div>
-            <div className="d-flex flex-column">
+            <div>
               <TextField
                 id="id"
                 label="ID"
@@ -98,6 +108,7 @@ function Login() {
               <TextField
                 id="password"
                 label="Password"
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 variant="outlined"
@@ -107,7 +118,6 @@ function Login() {
               <FormControlLabel
                 control={
                   <Checkbox
-                    defaultChecked={false}
                     sx={{
                       height: "20px",
                       color: "rgba(222, 136, 17, 1)",
@@ -123,18 +133,17 @@ function Login() {
               <Button
                 onClick={() => login(ID, password)}
                 variant="contained"
+                fullWidth
                 sx={{ backgroundColor: "rgba(131, 184, 253, 1)" }}
                 className="mt-4"
                 disabled={isDisabled}
-                loading={isLoading}
-                loadingPosition="end"
               >
                 Login
               </Button>
             </div>
           </div>
-        </Grid2>
-      </Grid2>
+        </Grid>
+      </Grid>
     </div>
   );
 }
