@@ -6,6 +6,7 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [userPhoto , setUserPhoto] = useState("")
   const [authToken, setAuthToken] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -63,7 +64,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, authToken, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, authToken, isLoading, login, logout , setUserPhoto , userPhoto}}>
       {children}
     </AuthContext.Provider>
   );

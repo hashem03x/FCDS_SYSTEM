@@ -26,7 +26,7 @@ function Home() {
   );
 }
 
-function Card({ children }) {
+export function Card({ children }) {
   return (
     <Box
       padding={4}
@@ -39,8 +39,8 @@ function Card({ children }) {
   );
 }
 
-function StudentDetails() {
-  const { user } = useAuth();
+export function StudentDetails() {
+  const { user  , setUserPhoto} = useAuth();
   const [profileImgURL, setProfileImgURL] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { logout } = useAuth();
@@ -70,6 +70,7 @@ function StudentDetails() {
 
       const ImageURL = await response.json();
       setProfileImgURL(ImageURL.profilePicture);
+      setUserPhoto(ImageURL.profilePicture);
       setIsLoading(false);
     };
     fetchStudentPhoto();
@@ -130,7 +131,7 @@ function StudentDetails() {
   );
 }
 
-function StudentCardSVG() {
+export function StudentCardSVG() {
   return (
     <svg
       width="212"
