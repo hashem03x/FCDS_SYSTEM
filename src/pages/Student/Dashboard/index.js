@@ -40,7 +40,7 @@ export function Card({ children }) {
 }
 
 export function StudentDetails() {
-  const { user  , setUserPhoto} = useAuth();
+  const { user, setUserPhoto } = useAuth();
   const [profileImgURL, setProfileImgURL] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { logout } = useAuth();
@@ -66,6 +66,7 @@ export function StudentDetails() {
             logout(); // Redirect to login page
           },
         });
+        return;
       }
 
       const ImageURL = await response.json();
@@ -83,7 +84,7 @@ export function StudentDetails() {
       </Typography>
       <div className="d-flex align-items-top mt-4">
         <div
-          style={{ width: "129px", height: "127", overflow: "hidden" }}
+          style={{ width: "160px", height: "160px", overflow: "hidden" }}
           className="rounded-circle me-3"
         >
           {isLoading ? (
@@ -888,7 +889,7 @@ const Course = ({ course, index }) => {
         style={{
           backgroundColor: "#B9E3F0",
           height: "100%",
-          width: "auto",
+          width: "150px",
           padding: "20px",
         }}
         className="d-flex flex-column text-center me-4"

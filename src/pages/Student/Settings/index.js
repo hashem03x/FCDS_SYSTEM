@@ -3,17 +3,20 @@ import {
   Box,
   Typography,
   Card,
-  CardContent,
   Button,
-  Divider,
   Stack,
   Avatar,
   CircularProgress,
+  CardContent,
+  Divider,
+  TextField,
+  Collapse,
 } from "@mui/material";
 import { faCamera, faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useAuth } from "../../../context/AuthContext";
 import { BASE_URL } from "../../../utils/api";
+import Swal from "sweetalert2";
 
 function Settings() {
   const { userPhoto, user } = useAuth();
@@ -80,7 +83,10 @@ function Settings() {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             <Stack direction="row" spacing={3} alignItems="center">
-              <Avatar sx={{ width: 80, height: 80 }} src={userPhoto || avatarUrl}>
+              <Avatar
+                sx={{ width: 80, height: 80 }}
+                src={userPhoto || avatarUrl}
+              >
                 U
               </Avatar>
               <input
@@ -110,26 +116,139 @@ function Settings() {
         </Card>
 
         {/* Change Password */}
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Change Password
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Stack spacing={2}>
-              <Button
-                variant="contained"
-                sx={{ backgroundColor: "#DE8811" }}
-                startIcon={<FontAwesomeIcon icon={faLock} />}
-              >
-                Change Password
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
+        <ChangePasswordCard />
       </Stack>
     </Box>
   );
 }
 
 export default Settings;
+
+const ChangePasswordCard = () => {
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleToggle = () => {
+    setShowPasswordFields((prev) => !prev);
+  };
+
+  const handlePasswordChange = async () => {
+    if (!oldPassword || !newPassword) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Please fill in all fields.",
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "New password must be at least 8 characters long.",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(`${BASE_URL}/api/auth/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+        },
+        body: JSON.stringify({
+          currentPassword: oldPassword,
+          newPassword: newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to change password.");
+      }
+
+      Swal.fire({
+        title: "Success",
+        text: data.message,
+        icon: "success",
+      });
+
+      // Optionally reset the form
+      setOldPassword("");
+      setNewPassword("");
+      setShowPasswordFields(false);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to change password.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card variant="outlined">
+      <CardContent>
+        <Typography variant="h6" fontWeight="bold" gutterBottom>
+          Change Password
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Stack spacing={2}>
+          <Button
+            variant="contained"
+            sx={{ backgroundColor: "#DE8811" }}
+            startIcon={<FontAwesomeIcon icon={faLock} />}
+            onClick={handleToggle}
+          >
+            Change Password
+          </Button>
+
+          <Collapse in={showPasswordFields}>
+            <Stack spacing={2} mt={2}>
+              <TextField
+                label="Old Password"
+                type="password"
+                fullWidth
+                variant="outlined"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+              />
+              <TextField
+                label="New Password"
+                type="password"
+                fullWidth
+                variant="outlined"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <Button
+                onClick={handlePasswordChange}
+                variant="contained"
+                color="primary"
+                sx={{ alignSelf: "flex-end" }}
+                startIcon={
+                  loading ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <FontAwesomeIcon icon={faLock} />
+                  )
+                }
+                disabled={loading}
+              >
+                {loading ? "Changing..." : "Change"}
+              </Button>
+            </Stack>
+          </Collapse>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+};

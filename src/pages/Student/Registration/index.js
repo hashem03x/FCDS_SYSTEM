@@ -24,6 +24,7 @@ function Registration() {
   const [isLoading, setIsLoading] = useState(false);
   const [schedule, setSchedule] = useState({});
   const { user } = useAuth();
+
   const fetchCourses = async () => {
     try {
       const response = await fetch(
@@ -36,14 +37,11 @@ function Registration() {
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to load courses");
-      }
+      if (!response.ok) throw new Error("Failed to load courses");
 
       const data = await response.json();
       setCourses(data.courses);
 
-      // Initialize selected sections with the first available section for each course
       const initialSelections = {};
       data.courses.forEach((course) => {
         if (course.sections?.length > 0) {
@@ -70,21 +68,14 @@ function Registration() {
     fetchCourses();
   }, [user?.id]);
 
-  console.log(registeredCourses);
-  registeredSections.map((section) =>
-    console.log({
-      courseCode: section.courseCode,
-      sectionId: section.sectionId,
-    })
-  );
   const parseTime = (timeStr) => {
     const [time, period] = timeStr.split(" ");
     const [hours, minutes] = time.split(":").map(Number);
+    const h = period === "PM" && hours !== 12 ? hours + 12 : hours;
     return {
-      hours: period === "PM" && hours !== 12 ? hours + 12 : hours,
+      hours: h,
       minutes,
-      totalMinutes:
-        (period === "PM" && hours !== 12 ? hours + 12 : hours) * 60 + minutes,
+      totalMinutes: h * 60 + minutes,
     };
   };
 
@@ -97,7 +88,6 @@ function Registration() {
     return schedule[newDay].some((item) => {
       const itemStart = parseTime(item.startTime).totalMinutes;
       const itemEnd = parseTime(item.endTime).totalMinutes;
-
       return (
         (newStart >= itemStart && newStart < itemEnd) ||
         (newEnd > itemStart && newEnd <= itemEnd) ||
@@ -144,10 +134,7 @@ function Registration() {
       return;
     }
 
-    const { day, startTime, endTime, room } = lecture;
-
-    // Check lecture time conflict
-    if (hasTimeConflict(day, startTime, endTime)) {
+    if (hasTimeConflict(lecture.day, lecture.startTime, lecture.endTime)) {
       Swal.fire({
         title: "Conflict!",
         text: "Lecture time conflicts with your schedule",
@@ -159,68 +146,63 @@ function Registration() {
       return;
     }
 
-    // Check section time conflicts if section exists
-    if (section?.sessions?.length > 0) {
-      for (const session of section.sessions) {
-        if (hasTimeConflict(session.day, session.startTime, session.endTime)) {
-          Swal.fire({
-            title: "Conflict!",
-            text: "Section time conflicts with your schedule",
-            icon: "warning",
-            timer: 2000,
-            position: "top-right",
-            showConfirmButton: false,
-          });
-          return;
-        }
+    for (const session of section?.sessions || []) {
+      if (hasTimeConflict(session.day, session.startTime, session.endTime)) {
+        Swal.fire({
+          title: "Conflict!",
+          text: "Section time conflicts with your schedule",
+          icon: "warning",
+          timer: 2000,
+          position: "top-right",
+          showConfirmButton: false,
+        });
+        return;
       }
     }
 
-    // Add lecture to schedule
-    setSchedule((prevSchedule) => {
-      const updatedSchedule = { ...prevSchedule };
-      if (!updatedSchedule[day]) {
-        updatedSchedule[day] = [];
-      }
+    setSchedule((prev) => {
+      const updated = { ...prev };
 
-      updatedSchedule[day].push({
+      const addToSchedule = (day, entry) => {
+        if (!updated[day]) updated[day] = [];
+        if (
+          !updated[day].some(
+            (item) => item.code === entry.code && item.type === entry.type
+          )
+        ) {
+          updated[day].push(entry);
+        }
+      };
+
+      addToSchedule(lecture.day, {
         type: "lecture",
         name: course.name,
         code: course.code,
-        startTime,
-        endTime,
-        room,
+        startTime: lecture.startTime,
+        endTime: lecture.endTime,
+        room: lecture.room,
       });
 
-      // Add section sessions to schedule if exists
-      if (section?.sessions?.length > 0) {
-        for (const session of section.sessions) {
-          const sessionDay = session.day;
-          if (!updatedSchedule[sessionDay]) {
-            updatedSchedule[sessionDay] = [];
-          }
+      section?.sessions?.forEach((session) => {
+        addToSchedule(session.day, {
+          type: "section",
+          name: course.name,
+          code: course.code,
+          sectionId: section.sectionId,
+          startTime: session.startTime,
+          endTime: session.endTime,
+          room: session.room,
+          teachingAssistant: section.teachingAssistant,
+        });
+      });
 
-          updatedSchedule[sessionDay].push({
-            type: "section",
-            name: course.name,
-            code: course.code,
-            sectionId: section.sectionId,
-            startTime: session.startTime,
-            endTime: session.endTime,
-            room: session.room,
-            teachingAssistant: section.teachingAssistant,
-          });
-        }
-      }
-
-      return updatedSchedule;
+      return updated;
     });
 
-    // Add to registered courses and sections
-    setRegisteredCourses((prev) => [...prev, course.code]);
+    setRegisteredCourses((prev) => [...new Set([...prev, course.code])]);
     if (section?.sectionId) {
       setRegisteredSections((prev) => [
-        ...prev,
+        ...prev.filter((s) => s.courseCode !== course.code),
         {
           courseCode: course.code,
           sectionId: section.sectionId,
@@ -241,28 +223,20 @@ function Registration() {
   };
 
   const removeCourseFromSchedule = (course) => {
-    setSchedule((prevSchedule) => {
-      const updatedSchedule = { ...prevSchedule };
-      const courseCode = course.code;
+    const courseCode = course.code;
 
-      // Remove lecture and sections from schedule
-      for (const day in updatedSchedule) {
-        updatedSchedule[day] = updatedSchedule[day].filter(
-          (item) => item.code !== courseCode
-        );
-
-        if (updatedSchedule[day].length === 0) {
-          delete updatedSchedule[day];
-        }
+    setSchedule((prev) => {
+      const updated = {};
+      for (const day in prev) {
+        const filtered = prev[day].filter((item) => item.code !== courseCode);
+        if (filtered.length) updated[day] = filtered;
       }
-
-      return updatedSchedule;
+      return updated;
     });
 
-    // Remove from registered courses and sections
-    setRegisteredCourses((prev) => prev.filter((code) => code !== course.code));
+    setRegisteredCourses((prev) => prev.filter((code) => code !== courseCode));
     setRegisteredSections((prev) =>
-      prev.filter((section) => section.courseCode !== course.code)
+      prev.filter((s) => s.courseCode !== courseCode)
     );
 
     Swal.fire({
@@ -274,7 +248,6 @@ function Registration() {
       showConfirmButton: false,
     });
   };
-
   return (
     <div>
       <CoursesTable
@@ -323,6 +296,8 @@ function CoursesTable({
     setSchedule({});
   };
 
+  console.log(registeredSections);
+
   const handleRegister = async () => {
     if (registeredCourses.length === 0) {
       Swal.fire({
@@ -337,7 +312,7 @@ function CoursesTable({
     }
 
     try {
-      // Prepare the course codes for registration
+      // 1. Register courses first
       const coursesResponse = await fetch(
         `${BASE_URL}/api/student/register-course/${user?.id}`,
         {
@@ -346,36 +321,50 @@ function CoursesTable({
             "Content-Type": "application/json",
             Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
           },
-          body: JSON.stringify({ courseCodes: registeredCourses }), // notice "courseCodes" (plural)
+          body: JSON.stringify({ courseCodes: registeredCourses }),
         }
       );
+
+      // 2. Check if course registration was successful
+      if (!coursesResponse.ok) {
+        const courseError = await coursesResponse.json();
+        throw new Error(courseError.message || "Course registration failed");
+      }
+      const registrations = registeredSections.flatMap((course) =>
+        course.sessions.map((session) => ({
+          courseCode: course.courseCode,
+          sectionId: course.sectionId,
+        }))
+      );
       const sectionsResponse = await fetch(
-        `${BASE_URL}/api/student/register-course/${user?.id}`,
+        `${BASE_URL}/api/student/register-section/${user?.id}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
           },
-          body: JSON.stringify({ courseCodes: registeredCourses }), // notice "courseCodes" (plural)
+          body: JSON.stringify({ registrations }),
         }
       );
 
-      const data = await coursesResponse.json();
+      const sectionData = await sectionsResponse.json();
 
-      if (!coursesResponse.ok) {
-        throw new Error(data.message || "Registration failed");
+      if (!sectionsResponse.ok) {
+        throw new Error(sectionData.message || "Section registration failed");
       }
 
+      // 4. All good — success!
       Swal.fire({
         title: "Success",
-        text: "Courses registered successfully!",
+        text: "Courses and sections registered successfully!",
         icon: "success",
         timer: 2000,
         position: "top-right",
         showConfirmButton: false,
       });
 
+      // Reset states
       setRegisteredCourses([]);
       setRegisteredSections([]);
       setSchedule({});
