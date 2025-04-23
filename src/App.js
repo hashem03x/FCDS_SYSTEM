@@ -13,6 +13,7 @@ import ExamsTable from "./pages/Student/Exams";
 import Settings from "./pages/Student/Settings";
 import { AuthProvider } from "./context/AuthContext";
 import AdminLayout from "./pages/Admin/AdminLayout";
+import Users from "./pages/Admin/Users";
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
             }
           >
             <Route index path="" element={<AdminDashboard />} />
+            <Route path="users" element={<Users />} />
           </Route>
 
           {/* Student Routes */}

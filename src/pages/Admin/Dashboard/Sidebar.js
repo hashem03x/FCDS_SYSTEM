@@ -21,6 +21,7 @@ import {
   faHouse,
   faAnglesLeft,
   faRightFromBracket,
+  faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ListItemIcon, Typography } from "@mui/material";
@@ -122,6 +123,7 @@ export default function MiniDrawer() {
         <List>
           {[
             "Home",
+            "Users",
             "Performance",
             "Registration",
             "Lectures Table",
@@ -131,12 +133,13 @@ export default function MiniDrawer() {
             <ListItem key={text} disablePadding sx={{ display: "block" }}>
               <ListItemButton
                 onClick={() => {
-                  index === 0 && navigate("/student");
-                  index === 1 && navigate("/student/performance");
-                  index === 2 && navigate("/student/registration");
-                  index === 3 && navigate("/student/lectures-table");
-                  index === 4 && navigate("/student/exams-table");
-                  index === 5 && navigate("/student/attendance");
+                  index === 0 && navigate("/admin");
+                  index === 1 && navigate("/admin/users");
+                  index === 2 && navigate("/admin/performance");
+                  index === 3 && navigate("/admin/registration");
+                  index === 4 && navigate("/admin/lectures-table");
+                  index === 5 && navigate("/admin/exams-table");
+                  index === 6 && navigate("/admin/attendance");
                 }}
                 sx={[
                   {
@@ -168,11 +171,12 @@ export default function MiniDrawer() {
                   ]}
                 >
                   {index === 0 && <FontAwesomeIcon icon={faHouse} />}
-                  {index === 1 && <FontAwesomeIcon icon={faChartSimple} />}
-                  {index === 2 && <FontAwesomeIcon icon={faFileLines} />}
-                  {index === 3 && <FontAwesomeIcon icon={faCalendarDays} />}
-                  {index === 4 && <FontAwesomeIcon icon={faGraduationCap} />}
-                  {index === 5 && <FontAwesomeIcon icon={faClipboardUser} />}
+                  {index === 1 && <FontAwesomeIcon icon={faUsers} />}
+                  {index === 2 && <FontAwesomeIcon icon={faChartSimple} />}
+                  {index === 3 && <FontAwesomeIcon icon={faFileLines} />}
+                  {index === 4 && <FontAwesomeIcon icon={faCalendarDays} />}
+                  {index === 5 && <FontAwesomeIcon icon={faGraduationCap} />}
+                  {index === 6 && <FontAwesomeIcon icon={faClipboardUser} />}
                 </ListItemIcon>
                 <ListItemText
                   primary={text}
@@ -203,7 +207,7 @@ export default function MiniDrawer() {
           {["Messages"].map((text, index) => (
             <ListItem key={text} disablePadding sx={{ display: "block" }}>
               <ListItemButton
-                onClick={() => navigate("/student/messages")}
+                onClick={() => navigate("/admin/messages")}
                 sx={[
                   {
                     minHeight: 48,
@@ -264,7 +268,7 @@ export default function MiniDrawer() {
           {["Settings"].map((text, index) => (
             <ListItem key={text} disablePadding sx={{ display: "block" }}>
               <ListItemButton
-                onClick={() => navigate("/student/settings")}
+                onClick={() => navigate("/admin/settings")}
                 sx={[
                   {
                     minHeight: 48,

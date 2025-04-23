@@ -1,18 +1,72 @@
-import { Box, Skeleton, Typography } from "@mui/material";
-import React, { useEffect, useState } from "react";
-import { BASE_URL } from "../../../utils/api";
-import { useAuth } from "../../../context/AuthContext";
-import Swal from "sweetalert2";
-import { useNavigate } from "react-router-dom";
-function Home() {
-  return <></>;
-}
+import React from 'react';
+import {
+  Box,
+  Typography,
+  AppBar,
+  Toolbar,
+  Button,
+  Grid,
+  Card,
+  CardContent,
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
-function Card({ children }) {
-  return "";
-}
+const Dashboard = () => {
+  const navigate = useNavigate();
 
+  const pages = [
+    { label: 'Users', path: '/admin/users' },
+    { label: 'Performance', path: '/admin/performance' },
+    { label: 'Registration', path: '/admin/registration' },
+    { label: 'Lectures Table', path: '/admin/lectures-table' },
+    { label: 'Exams Table', path: '/admin/exams-table' },
+    { label: 'Attendance', path: '/admin/attendance' },
+  ];
 
+  return (
+    <Box sx={{ flexGrow: 1 }}>
+      <AppBar position="static" elevation={1}>
+        <Toolbar>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            Admin Dashboard
+          </Typography>
+          <Button color="inherit" onClick={() => navigate('/admin')}>
+            Home
+          </Button>
+        </Toolbar>
+      </AppBar>
 
+      <Box sx={{ p: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Welcome, Admin 🎉
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" mb={4}>
+          Choose a section to manage:
+        </Typography>
 
-export default Home;
+        <Grid container spacing={3}>
+          {pages.map((page) => (
+            <Grid item xs={12} sm={6} md={4} key={page.path}>
+              <Card
+                sx={{
+                  cursor: 'pointer',
+                  '&:hover': { boxShadow: 6 },
+                }}
+                onClick={() => navigate(page.path)}
+              >
+                <CardContent>
+                  <Typography variant="h6">{page.label}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Manage {page.label.toLowerCase()}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    </Box>
+  );
+};
+
+export default Dashboard;
