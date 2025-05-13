@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Box,
   Typography,
@@ -8,19 +8,19 @@ import {
   Grid,
   Card,
   CardContent,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
   const pages = [
-    { label: 'Users', path: '/admin/users' },
-    { label: 'Courses', path: '/admin/courses' },
-    { label: 'Sections', path: '/admin/sections' },
-    { label: 'Lectures Table', path: '/admin/lectures-table' },
-    { label: 'Exams Table', path: '/admin/exams-table' },
-    { label: 'Attendance', path: '/admin/attendance' },
+    { label: "Users", path: "/admin/users" },
+    { label: "Courses", path: "/admin/courses" },
+    { label: "Sections", path: "/admin/sections" },
+    { label: "Complaints", path: "/admin/complaints" },
+    { label: "Fees", path: "/admin/fees" },
+    { label: "Attendance", path: "/admin/attendance" },
   ];
 
   return (
@@ -30,7 +30,7 @@ const Dashboard = () => {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Admin Dashboard
           </Typography>
-          <Button color="inherit" onClick={() => navigate('/admin')}>
+          <Button color="inherit" onClick={() => navigate("/admin")}>
             Home
           </Button>
         </Toolbar>
@@ -49,8 +49,8 @@ const Dashboard = () => {
             <Grid item xs={12} sm={6} md={4} key={page.path}>
               <Card
                 sx={{
-                  cursor: 'pointer',
-                  '&:hover': { boxShadow: 6 },
+                  cursor: "pointer",
+                  "&:hover": { boxShadow: 6 },
                 }}
                 onClick={() => navigate(page.path)}
               >

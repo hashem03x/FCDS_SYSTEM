@@ -78,11 +78,11 @@ const Attendance = () => {
 
       // ✅ Success alert
       console.log("NAME" , user?.name)
-      if (data.label === user?.name) {
+      if (data.label ) {
         Swal.fire({
           icon: "success",
           title: "Verification Successful",
-          text: `Welcome, ${user?.name || user?.id}!\nConfidence: ${(
+          text: `Welcome, ${data.label}!\nConfidence: ${(
             data.confidence * 100
           ).toFixed(2)}%`,
         });
@@ -90,7 +90,7 @@ const Attendance = () => {
         Swal.fire({
           icon: "error",
           title: "Unauthorized User",
-          text: `Detected: ${data.label}. You are not authorized.`,
+          text: `You are not authorized.`,
         });
       }
     } finally {

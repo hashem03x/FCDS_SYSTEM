@@ -22,6 +22,10 @@ import {
   faAnglesLeft,
   faRightFromBracket,
   faUsers,
+  faBook,
+  faLayerGroup,
+  faExclamationTriangle,
+  faMoneyBillAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ListItemIcon, Typography } from "@mui/material";
@@ -126,8 +130,8 @@ export default function MiniDrawer() {
             "Users",
             "Courses",
             "Sections",
-            "Lectures Table",
-            "Exam's Table",
+            "Complaints",
+            "Fees",
             "Attendance",
           ].map((text, index) => (
             <ListItem key={text} disablePadding sx={{ display: "block" }}>
@@ -137,8 +141,8 @@ export default function MiniDrawer() {
                   index === 1 && navigate("/admin/users");
                   index === 2 && navigate("/admin/courses");
                   index === 3 && navigate("/admin/sections");
-                  index === 4 && navigate("/admin/lectures-table");
-                  index === 5 && navigate("/admin/exams-table");
+                  index === 4 && navigate("/admin/complaints");
+                  index === 5 && navigate("/admin/fees");
                   index === 6 && navigate("/admin/attendance");
                 }}
                 sx={[
@@ -172,10 +176,10 @@ export default function MiniDrawer() {
                 >
                   {index === 0 && <FontAwesomeIcon icon={faHouse} />}
                   {index === 1 && <FontAwesomeIcon icon={faUsers} />}
-                  {index === 2 && <FontAwesomeIcon icon={faChartSimple} />}
-                  {index === 3 && <FontAwesomeIcon icon={faFileLines} />}
-                  {index === 4 && <FontAwesomeIcon icon={faCalendarDays} />}
-                  {index === 5 && <FontAwesomeIcon icon={faGraduationCap} />}
+                  {index === 2 && <FontAwesomeIcon icon={faBook} />}
+                  {index === 3 && <FontAwesomeIcon icon={faLayerGroup} />}
+                  {index === 4 && <FontAwesomeIcon icon={faExclamationTriangle} />}
+                  {index === 5 && <FontAwesomeIcon icon={faMoneyBillAlt} />}
                   {index === 6 && <FontAwesomeIcon icon={faClipboardUser} />}
                 </ListItemIcon>
                 <ListItemText

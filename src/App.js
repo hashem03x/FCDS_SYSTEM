@@ -17,6 +17,8 @@ import AdminLayout from "./pages/Admin/AdminLayout";
 import Users from "./pages/Admin/Users";
 import Courses from "./pages/Admin/Courses";
 import Sections from "./pages/Admin/Sections";
+import Complaints from "./pages/Admin/Complaints";
+import Fees from "./pages/Admin/Fees";
 
 function App() {
   return (
@@ -42,6 +44,8 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="courses" element={<Courses />} />
             <Route path="sections" element={<Sections />} />
+            <Route path="complaints" element={<Complaints />} />
+            <Route path="fees" element={<Fees />} />
           </Route>
 
           {/* Student Routes */}

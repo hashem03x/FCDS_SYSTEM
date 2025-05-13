@@ -1,6 +1,10 @@
 import React from "react";
 import fcds from "../assets/images/FCDS.png";
+import { useAuth } from "../context/AuthContext";
+import { Typography } from "@mui/material";
 function Header() {
+  const { userRole } = useAuth();
+
   return (
     <header
       className=" d-flex align-items-center"
@@ -19,13 +23,11 @@ function Header() {
             style={{ width: "165px", height: "125px" }}
           />
         </div>
-        <div
-          style={{
-            width: "50%",
-            boxShadow: "-3px -1px 20px 0px rgba(0, 0, 0, 0.09)",
-            borderRadius: "10px",
-          }}
-        ></div>
+        <Typography variant="h5">
+          {userRole === "admin" && "FCDS Admin Dashboard"}
+          {userRole === "student" && "FCDS Student Dashboard"}
+          {userRole === "doctor" && "FCDS Doctor Dashboard"}
+        </Typography>
       </div>
     </header>
   );

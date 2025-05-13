@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userPhoto, setUserPhoto] = useState("");
   const [authToken, setAuthToken] = useState(null);
+  const [userRole , setUserRole] = useState("")
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -34,6 +35,7 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.setItem("IsLoggedIn", true);
       if (data.user.role === "admin") navigate("/admin/");
       if (data.user.role === "student") navigate("/student/");
+      setUserRole(data.user.role)
     } catch (error) {
       alert(error.message);
     } finally {
@@ -61,6 +63,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         setUserPhoto,
         userPhoto,
+        userRole
       }}
     >
       {children}

@@ -65,7 +65,7 @@ const ExamCard = ({ exam }) => {
 };
 
 const ExamTimetable = () => {
-  const { user } = useAuth();
+  const { user , authToken} = useAuth();
   const [exams, setExams] = useState([]);
   const [message, setMessage] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -79,7 +79,7 @@ const ExamTimetable = () => {
           {
             method: "GET",
             headers: {
-              Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+              Authorization: `Bearer ${authToken}`,
             },
           }
         );
