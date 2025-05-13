@@ -12,6 +12,7 @@ import login_bg_shapes from "../../assets/images/login_bg_shapes.png";
 import login_image from "../../assets/images/login_image.png";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.js";
+import { CircularProgress } from "@mui/material";
 
 function Login() {
   const navigate = useNavigate();
@@ -136,9 +137,13 @@ function Login() {
                 fullWidth
                 sx={{ backgroundColor: "rgba(131, 184, 253, 1)" }}
                 className="mt-4"
-                disabled={isDisabled}
+                disabled={isDisabled || isLoading}
               >
-                Login
+                {isLoading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Login"
+                )}
               </Button>
             </div>
           </div>

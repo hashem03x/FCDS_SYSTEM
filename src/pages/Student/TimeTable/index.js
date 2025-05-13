@@ -13,7 +13,7 @@ import { BASE_URL } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
 
 const Timetable = ({ data }) => {
-  const { user } = useAuth();
+  const { user , authToken } = useAuth();
   const [timeTableData, setTimeTableData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
@@ -24,7 +24,7 @@ const Timetable = ({ data }) => {
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
         }
       );

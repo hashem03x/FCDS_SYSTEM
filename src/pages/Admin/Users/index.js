@@ -47,6 +47,8 @@ function Users() {
   const [formData, setFormData] = useState(initialFormState);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const { authToken } = useAuth();
+
   const roles = ["student", "admin", "doctor", "teaching assistant"];
 
   const isStudent = formData.role === "student";
@@ -57,13 +59,12 @@ function Users() {
       const res = await fetch(`${BASE_URL}/api/admin/users`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+          Authorization: `Bearer ${authToken}`,
         },
       });
       const data = await res.json();
       setUsers(data);
-      console.log(data);
-    } catch (err) {
+      } catch (err) {
       console.error("Failed to fetch users:", err);
     } finally {
       setLoading(false);
@@ -88,7 +89,7 @@ function Users() {
         await fetch(`${BASE_URL}/api/admin/delete-user/${id}`, {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
         });
         await fetchUsers();
@@ -141,7 +142,7 @@ function Users() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`, // Add your token here
+            Authorization: `Bearer ${authToken}`, // Add your token here
           },
           body: JSON.stringify(formData),
         }
@@ -191,7 +192,7 @@ function Users() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify(formData),
         }
@@ -253,7 +254,7 @@ function Users() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>#</TableCell>
+              <TableCell>ID</TableCell>
               <TableCell>Name</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Role</TableCell>
@@ -287,9 +288,9 @@ function Users() {
                         .includes(searchTerm.toLowerCase()) ||
                       user.id?.includes(searchTerm)
                   )
-                  .map((user, index) => (
-                    <TableRow key={user._id}>
-                      <TableCell>{index + 1}</TableCell>
+                  .map((user, index) => ( 
+                    <TableRow key={index}>
+                      <TableCell>{user?.id}</TableCell>
                       <TableCell>{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>{user.role}</TableCell>

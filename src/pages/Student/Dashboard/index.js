@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { BASE_URL } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
 import Swal from "sweetalert2";
-import { useNavigate } from "react-router-dom";
+import { Avatar, Paper, Stack, IconButton } from "@mui/material";
 function Home() {
   return (
     <>
@@ -19,7 +19,9 @@ function Home() {
           </Card>
         </div>
         <div className="mt-4 col-md-6 col-sm-12">
-          <Card>New Announcments</Card>
+          <Card>
+            <NewAnnouncements />
+          </Card>
         </div>
       </div>
     </>
@@ -40,7 +42,7 @@ export function Card({ children }) {
 }
 
 export function StudentDetails() {
-  const { user, setUserPhoto } = useAuth();
+  const { user, setUserPhoto, authToken } = useAuth();
   const [profileImgURL, setProfileImgURL] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { logout } = useAuth();
@@ -52,7 +54,7 @@ export function StudentDetails() {
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
         }
       );
@@ -75,6 +77,7 @@ export function StudentDetails() {
       setIsLoading(false);
     };
     fetchStudentPhoto();
+    console.log(authToken);
   }, []);
 
   return (
@@ -97,33 +100,27 @@ export function StudentDetails() {
           )}
         </div>
         <div className="d-flex flex-column" style={{ width: "50%" }}>
-          <Typography>
-            {JSON.parse(window.sessionStorage.getItem("user"))?.name}
-          </Typography>
+          <Typography>{user?.name}</Typography>
           <div className="row mt-4">
             <div className="d-flex flex-column col-lg-4 col-md-6 col-12">
               <Typography className="mb-3" color="#6F6B6B">
                 Level
               </Typography>
               <Typography sx={{ color: "#2F748F" }}>
-                {JSON.parse(sessionStorage.getItem("user"))?.academicLevel}
+                {user?.academicLevel}
               </Typography>
             </div>
             <div className="d-flex flex-column col-lg-4 col-md-6 col-12 ">
               <Typography sx={{ color: "#6F6B6B" }} className="mb-3">
                 CGPA
               </Typography>
-              <Typography sx={{ color: "#2F748F" }}>
-                {JSON.parse(sessionStorage.getItem("user"))?.cgpa}
-              </Typography>
+              <Typography sx={{ color: "#2F748F" }}>{user?.cgpa}</Typography>
             </div>
             <div className="d-flex flex-column col-lg-4 col-md-6 col-12 ">
               <Typography sx={{ color: "#6F6B6B" }} className="mb-3">
                 College E-mail
               </Typography>
-              <Typography sx={{ color: "#2F748F" }}>
-                {JSON.parse(window.sessionStorage.getItem("user"))?.email}
-              </Typography>
+              <Typography sx={{ color: "#2F748F" }}>{user?.email}</Typography>
             </div>
           </div>
         </div>
@@ -763,7 +760,7 @@ export function StudentCardSVG() {
 const UpcomingCourses = () => {
   const [upcomingCourses, setUpcomingCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, authToken } = useAuth();
   useEffect(() => {
     const fetchTimetable = async () => {
       setIsLoading(true);
@@ -772,7 +769,7 @@ const UpcomingCourses = () => {
           `${BASE_URL}/api/student/time-table/${user.id}`,
           {
             headers: {
-              Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+              Authorization: `Bearer ${authToken}`,
             },
           }
         );
@@ -907,6 +904,132 @@ const Course = ({ course, index }) => {
         Room: {course.room}
       </div>
     </div>
+  );
+};
+
+const NewAnnouncements = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const { authToken } = useAuth();
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(
+          `${BASE_URL}/api/announcements/get-announcement`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+        const data = await response.json();
+        if (response.ok) {
+          setAnnouncements(data.announcements);
+        } else {
+          console.error("Error fetching announcements:", data.message);
+        }
+      } catch (error) {
+        console.error("Failed to fetch announcements:", error);
+      }
+      setIsLoading(false);
+    };
+
+    fetchAnnouncements();
+  }, []);
+
+  return (
+    <div>
+      <Typography sx={{ fontSize: "24px", fontWeight: "bold" }}>
+        New Announcments
+      </Typography>
+      <div className="d-flex flex-column align-items-start mt-3 w-100">
+        {isLoading ? (
+          <>
+            <Skeleton width="100%" height={50} />
+            <Skeleton width="100%" height={50} />
+            <Skeleton width="100%" height={50} />
+            <Skeleton width="100%" height={50} />
+          </>
+        ) : announcements.length > 0 ? (
+          <div style={{ width: "100%" }}>
+            {announcements.map((data, index) => (
+              <Announcment data={data} key={index} />
+            ))}
+          </div>
+        ) : (
+          "No new announcements."
+        )}
+      </div>
+    </div>
+  );
+};
+
+const Announcment = ({data}) => {
+
+  const { content , createdAt , sender} = data
+
+  function stringAvatar(name) {
+    const initials = name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase();
+  
+    return {
+      children: initials,
+    };
+  }
+  
+  const localDate = new Date(createdAt).toLocaleString("en-EG", {
+    timeZone: "Africa/Cairo",
+    dateStyle: "full",
+    timeStyle: "short"
+  });
+  
+  return (
+    <Box sx={{ width: "100%", borderRadius: 4, bgcolor: "#f7f7f7" }}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
+      >
+        <IconButton size="small" sx={{ color: "#ff6d00" }}></IconButton>
+      </Stack>
+
+      <Paper
+        elevation={3}
+        sx={{ bgcolor: "#e0f7fa", borderRadius: 3, p: 2, position: "relative" }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+        <Avatar {...stringAvatar(sender.name)} alt={sender.name} sx={{ width: 40, height: 40, mr: 1 }} />
+        <Box>
+            <Typography variant="subtitle2" fontWeight="bold">
+            {sender.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {localDate}
+            </Typography>
+          </Box>
+        </Box>
+        <Typography variant="body1" fontWeight={500}>
+          {content}
+        </Typography>
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            width: 12,
+            height: 12,
+            bgcolor: "#0277bd",
+            borderRadius: "50%",
+          }}
+        />
+      </Paper>
+    </Box>
   );
 };
 

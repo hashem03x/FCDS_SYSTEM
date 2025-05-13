@@ -14,30 +14,40 @@ import { useAuth } from "../../../context/AuthContext";
 import { Box, Skeleton, Typography } from "@mui/material";
 
 function StudentPerformance() {
-  const { user } = useAuth();
+  const { user, authToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [performance, setPerformance] = useState([]);
   const [passedCourses, setPassedCourses] = useState([]);
-  useEffect(() => {
-    const fetchPerformance = async () => {
+  const fetchPerformance = async () => {
+    try {
       setIsLoading(true);
       const response = await fetch(
         `${BASE_URL}/api/gpa/performance/${user.id}`,
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
         }
       );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       setPerformance(data.performance);
       setPassedCourses(data.performance.passedCourses);
+    } catch (error) {
+      console.error("Failed to fetch performance:", error);
+    } finally {
       setIsLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.id || !authToken) return;
     fetchPerformance();
-  }, []);
-  console.log(performance);
+  }, [user?.id, authToken]);
+
   return (
     <div>
       <Typography fontSize="32px">Performance</Typography>
@@ -319,7 +329,6 @@ function CoursesTable({ passedCourses }) {
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((row, index) => (
                 <TableRow key={index}>
-                  
                   <TableCell align="center">{row.code}</TableCell>
                   <TableCell align="center">{row.name}</TableCell>
                   <TableCell align="center">{row.creditHours}</TableCell>

@@ -124,8 +124,8 @@ export default function MiniDrawer() {
           {[
             "Home",
             "Users",
-            "Performance",
-            "Registration",
+            "Courses",
+            "Sections",
             "Lectures Table",
             "Exam's Table",
             "Attendance",
@@ -135,8 +135,8 @@ export default function MiniDrawer() {
                 onClick={() => {
                   index === 0 && navigate("/admin");
                   index === 1 && navigate("/admin/users");
-                  index === 2 && navigate("/admin/performance");
-                  index === 3 && navigate("/admin/registration");
+                  index === 2 && navigate("/admin/courses");
+                  index === 3 && navigate("/admin/sections");
                   index === 4 && navigate("/admin/lectures-table");
                   index === 5 && navigate("/admin/exams-table");
                   index === 6 && navigate("/admin/attendance");

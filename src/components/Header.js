@@ -1,10 +1,6 @@
 import React from "react";
 import fcds from "../assets/images/FCDS.png";
-import { TextField } from "@mui/material";
 function Header() {
-
-
-  
   return (
     <header
       className=" d-flex align-items-center"
@@ -29,9 +25,7 @@ function Header() {
             boxShadow: "-3px -1px 20px 0px rgba(0, 0, 0, 0.09)",
             borderRadius: "10px",
           }}
-        >
-          <TextField fullWidth label="Search" id="fullWidth" />
-        </div>
+        ></div>
       </div>
     </header>
   );

@@ -11,9 +11,12 @@ import Registration from "./pages/Student/Registration";
 import TimeTable from "./pages/Student/TimeTable";
 import ExamsTable from "./pages/Student/Exams";
 import Settings from "./pages/Student/Settings";
+import Attendance from "./pages/Student/Attendance";
 import { AuthProvider } from "./context/AuthContext";
 import AdminLayout from "./pages/Admin/AdminLayout";
 import Users from "./pages/Admin/Users";
+import Courses from "./pages/Admin/Courses";
+import Sections from "./pages/Admin/Sections";
 
 function App() {
   return (
@@ -37,6 +40,8 @@ function App() {
           >
             <Route index path="" element={<AdminDashboard />} />
             <Route path="users" element={<Users />} />
+            <Route path="courses" element={<Courses />} />
+            <Route path="sections" element={<Sections />} />
           </Route>
 
           {/* Student Routes */}
@@ -55,6 +60,7 @@ function App() {
             <Route path="lectures-table" element={<TimeTable />} />
             <Route path="exams-table" element={<ExamsTable />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="attendance" element={<Attendance />} />
           </Route>
 
           {/* Catch-All Page */}

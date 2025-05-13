@@ -16,8 +16,8 @@ const Dashboard = () => {
 
   const pages = [
     { label: 'Users', path: '/admin/users' },
-    { label: 'Performance', path: '/admin/performance' },
-    { label: 'Registration', path: '/admin/registration' },
+    { label: 'Courses', path: '/admin/courses' },
+    { label: 'Sections', path: '/admin/sections' },
     { label: 'Lectures Table', path: '/admin/lectures-table' },
     { label: 'Exams Table', path: '/admin/exams-table' },
     { label: 'Attendance', path: '/admin/attendance' },

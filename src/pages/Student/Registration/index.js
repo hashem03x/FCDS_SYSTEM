@@ -23,7 +23,7 @@ function Registration() {
   const [selectedSections, setSelectedSections] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [schedule, setSchedule] = useState({});
-  const { user } = useAuth();
+  const { user , authToken} = useAuth();
 
   const fetchCourses = async () => {
     try {
@@ -32,7 +32,7 @@ function Registration() {
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
         }
       );
@@ -64,6 +64,7 @@ function Registration() {
   };
 
   useEffect(() => {
+    if (!user?.id) return;
     setIsLoading(true);
     fetchCourses();
   }, [user?.id]);
@@ -147,7 +148,7 @@ function Registration() {
     }
 
     for (const session of section?.sessions || []) {
-      if (hasTimeConflict(session.day, session.startTime, session.endTime)) {
+      if (hasTimeConflict(session?.day, session?.startTime, session.endTime)) {
         Swal.fire({
           title: "Conflict!",
           text: "Section time conflicts with your schedule",
@@ -289,6 +290,7 @@ function CoursesTable({
   setIsLoading,
 }) {
   const { user } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleClearAll = () => {
     setRegisteredCourses([]);
@@ -311,6 +313,7 @@ function CoursesTable({
       return;
     }
 
+    setIsSaving(true);
     try {
       // 1. Register courses first
       const coursesResponse = await fetch(
@@ -368,6 +371,7 @@ function CoursesTable({
       setRegisteredCourses([]);
       setRegisteredSections([]);
       setSchedule({});
+      setIsSaving(false);
     } catch (error) {
       Swal.fire({
         title: "Error",
@@ -378,6 +382,7 @@ function CoursesTable({
         showConfirmButton: false,
       });
       console.error("Registration error:", error);
+      setIsSaving(false);
     }
   };
 
@@ -474,11 +479,11 @@ function CoursesTable({
                     <TableCell align="center">{course.code}</TableCell>
                     <TableCell align="center">د/{course.doctorName}</TableCell>
                     <TableCell align="center">
-                      {course.lectureSessions[0].day.slice(0, 3)}{" "}
-                      {course.lectureSessions[0].startTime} -{" "}
-                      {course.lectureSessions[0].endTime}
+                      {course.lectureSessions[0]?.day.slice(0, 3)}{" "}
+                      {course.lectureSessions[0]?.startTime} -{" "}
+                      {course.lectureSessions[0]?.endTime}
                       <br />
-                      {course.lectureSessions[0].room}
+                      {course.lectureSessions[0]?.room}
                     </TableCell>
                     <TableCell align="center">
                       {section?.teachingAssistant
@@ -559,9 +564,14 @@ function CoursesTable({
           className="me-4"
           color="primary"
           onClick={() => handleRegister()}
+          disabled={isSaving}
         >
-          Save <FontAwesomeIcon className="ms-3" icon={faFloppyDisk} />
+          {isSaving ? "Saving..." : "Save"}
+          {!isSaving && (
+            <FontAwesomeIcon className="ms-3" icon={faFloppyDisk} />
+          )}
         </Button>
+
         <Button
           onClick={() => handleClearAll()}
           variant="contained"

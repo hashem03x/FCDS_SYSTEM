@@ -1,7 +1,8 @@
 import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const PublicRoutes = () => {
-  const user = JSON.parse(sessionStorage.getItem("user"));
+  const { user } = useAuth();
 
   if (user) {
     return user.role === "admin" ? (
