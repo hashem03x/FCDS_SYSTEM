@@ -11,13 +11,8 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import {
   faAnglesRight,
-  faCalendarDays,
-  faChartSimple,
-  faClipboardUser,
   faComment,
-  faFileLines,
   faGear,
-  faGraduationCap,
   faHouse,
   faAnglesLeft,
   faRightFromBracket,
@@ -26,6 +21,7 @@ import {
   faLayerGroup,
   faExclamationTriangle,
   faMoneyBillAlt,
+  faFilePen,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ListItemIcon, Typography } from "@mui/material";
@@ -132,7 +128,7 @@ export default function MiniDrawer() {
             "Sections",
             "Complaints",
             "Fees",
-            "Attendance",
+            "Exams",
           ].map((text, index) => (
             <ListItem key={text} disablePadding sx={{ display: "block" }}>
               <ListItemButton
@@ -143,7 +139,7 @@ export default function MiniDrawer() {
                   index === 3 && navigate("/admin/sections");
                   index === 4 && navigate("/admin/complaints");
                   index === 5 && navigate("/admin/fees");
-                  index === 6 && navigate("/admin/attendance");
+                  index === 6 && navigate("/admin/exams");
                 }}
                 sx={[
                   {
@@ -178,131 +174,11 @@ export default function MiniDrawer() {
                   {index === 1 && <FontAwesomeIcon icon={faUsers} />}
                   {index === 2 && <FontAwesomeIcon icon={faBook} />}
                   {index === 3 && <FontAwesomeIcon icon={faLayerGroup} />}
-                  {index === 4 && <FontAwesomeIcon icon={faExclamationTriangle} />}
+                  {index === 4 && (
+                    <FontAwesomeIcon icon={faExclamationTriangle} />
+                  )}
                   {index === 5 && <FontAwesomeIcon icon={faMoneyBillAlt} />}
-                  {index === 6 && <FontAwesomeIcon icon={faClipboardUser} />}
-                </ListItemIcon>
-                <ListItemText
-                  primary={text}
-                  sx={[
-                    open
-                      ? {
-                          opacity: 1,
-                        }
-                      : {
-                          opacity: 0,
-                        },
-                  ]}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-        {open ? (
-          <Typography
-            sx={{ color: "grey", fontSize: "12px", marginLeft: "8px" }}
-          >
-            Commuincation
-          </Typography>
-        ) : (
-          <Divider sx={{ border: "1px solid" }} />
-        )}
-        <List>
-          {["Messages"].map((text, index) => (
-            <ListItem key={text} disablePadding sx={{ display: "block" }}>
-              <ListItemButton
-                onClick={() => navigate("/admin/messages")}
-                sx={[
-                  {
-                    minHeight: 48,
-                    px: 2.5,
-                  },
-                  open
-                    ? {
-                        justifyContent: "initial",
-                      }
-                    : {
-                        justifyContent: "center",
-                      },
-                ]}
-              >
-                <ListItemIcon
-                  sx={[
-                    {
-                      minWidth: 0,
-                      justifyContent: "center",
-                    },
-                    open
-                      ? {
-                          mr: 3,
-                        }
-                      : {
-                          mr: "auto",
-                        },
-                  ]}
-                >
-                  <FontAwesomeIcon icon={faComment} />
-                </ListItemIcon>
-                <ListItemText
-                  primary={text}
-                  sx={[
-                    open
-                      ? {
-                          opacity: 1,
-                        }
-                      : {
-                          opacity: 0,
-                        },
-                  ]}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-        {open ? (
-          <Typography
-            sx={{ color: "grey", fontSize: "12px", marginLeft: "8px" }}
-          >
-            Settings
-          </Typography>
-        ) : (
-          <Divider sx={{ border: "1px solid" }} />
-        )}
-        <List>
-          {["Settings"].map((text, index) => (
-            <ListItem key={text} disablePadding sx={{ display: "block" }}>
-              <ListItemButton
-                onClick={() => navigate("/admin/settings")}
-                sx={[
-                  {
-                    minHeight: 48,
-                    px: 2.5,
-                  },
-                  open
-                    ? {
-                        justifyContent: "initial",
-                      }
-                    : {
-                        justifyContent: "center",
-                      },
-                ]}
-              >
-                <ListItemIcon
-                  sx={[
-                    {
-                      minWidth: 0,
-                      justifyContent: "center",
-                    },
-                    open
-                      ? {
-                          mr: 3,
-                        }
-                      : {
-                          mr: "auto",
-                        },
-                  ]}
-                >
-                  <FontAwesomeIcon icon={faGear} />
+                  {index === 6 && <FontAwesomeIcon icon={faFilePen} />}
                 </ListItemIcon>
                 <ListItemText
                   primary={text}

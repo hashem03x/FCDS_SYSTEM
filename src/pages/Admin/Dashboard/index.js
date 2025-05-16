@@ -20,7 +20,7 @@ const Dashboard = () => {
     { label: "Sections", path: "/admin/sections" },
     { label: "Complaints", path: "/admin/complaints" },
     { label: "Fees", path: "/admin/fees" },
-    { label: "Attendance", path: "/admin/attendance" },
+    { label: "Exams", path: "/admin/exams" },
   ];
 
   return (
