@@ -57,9 +57,6 @@ function Login() {
             },
           }}
         >
-          <div style={{ position: "relative", zIndex: 2 }}>
-            <img src={logo} alt="Alexu Logo" width={180} />
-          </div>
           <div
             style={{
               zIndex: 2,
@@ -91,6 +88,9 @@ function Login() {
           }}
         >
           <div style={{ width: "100%", maxWidth: "400px" }}>
+            <div style={{ position: "absolute", zIndex: 2 , top: "20px", right: "20px"}}>
+              <img src={logo} alt="Alexu Logo" width={180} />
+            </div>
             <div style={{ textAlign: "left", marginBottom: "20px" }}>
               <p style={{ fontSize: "30px", fontWeight: "bold" }}>
                 Account Login

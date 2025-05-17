@@ -4,6 +4,10 @@ import { BASE_URL } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
 import Swal from "sweetalert2";
 import { Avatar, Paper, Stack, IconButton } from "@mui/material";
+
+// Add default avatar image
+const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
 function Home() {
   return (
     <>
@@ -43,42 +47,58 @@ export function Card({ children }) {
 
 export function StudentDetails() {
   const { user, setUserPhoto, authToken } = useAuth();
-  const [profileImgURL, setProfileImgURL] = useState("");
+  const [profileImgURL, setProfileImgURL] = useState(DEFAULT_AVATAR);
   const [isLoading, setIsLoading] = useState(false);
   const { logout } = useAuth();
+
   useEffect(() => {
     const fetchStudentPhoto = async () => {
       setIsLoading(true);
-      const response = await fetch(
-        `${BASE_URL}/api/auth/get-profile-picture/${user?.id}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
+      try {
+        const response = await fetch(
+          `${BASE_URL}/api/auth/get-profile-picture/${user?.id}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+        if (response.status === 401) {
+          Swal.fire({
+            title: "Session expired",
+            text: "Session expired, Please login again",
+            timer: 2000,
+            allowOutsideClick: false,
+            didClose: () => {
+              logout(); // Redirect to login page
+            },
+          });
+          return;
         }
-      );
-      if (response.status === 401) {
-        Swal.fire({
-          title: "Session expired",
-          text: "Session expired, Please login again",
-          timer: 2000,
-          allowOutsideClick: false,
-          didClose: () => {
-            logout(); // Redirect to login page
-          },
-        });
-        return;
-      }
 
-      const ImageURL = await response.json();
-      setProfileImgURL(ImageURL.profilePicture);
-      setUserPhoto(ImageURL.profilePicture);
+        const ImageURL = await response.json();
+        if (ImageURL.profilePicture) {
+          setProfileImgURL(ImageURL.profilePicture);
+          setUserPhoto(ImageURL.profilePicture);
+        } else {
+          setProfileImgURL(DEFAULT_AVATAR);
+          setUserPhoto(DEFAULT_AVATAR);
+        }
+      } catch (error) {
+        console.error("Error fetching profile picture:", error);
+        setProfileImgURL(DEFAULT_AVATAR);
+        setUserPhoto(DEFAULT_AVATAR);
+      }
       setIsLoading(false);
     };
     fetchStudentPhoto();
-    console.log(authToken);
   }, []);
+
+  const handleImageError = () => {
+    setProfileImgURL(DEFAULT_AVATAR);
+    setUserPhoto(DEFAULT_AVATAR);
+  };
 
   return (
     <div className="d-flex flex-column" style={{ flex: "1" }}>
@@ -94,8 +114,10 @@ export function StudentDetails() {
             <Skeleton height="100%" animation="wave" />
           ) : (
             <img
-              style={{ height: "100%", width: "100%" }}
+              style={{ height: "100%", width: "100%", objectFit: "cover" }}
               src={profileImgURL}
+              onError={handleImageError}
+              alt="Student Profile"
             />
           )}
         </div>
@@ -423,8 +445,11 @@ export function StudentCardSVG() {
       <path
         fill-rule="evenodd"
         clip-rule="evenodd"
-        d="M46.5225 119.378L85.4435 120.359C85.4435 120.359 89.8592 120.182 89.0663 123.476C88.2734 126.771 68.5463 184.697 68.5463 184.697C68.5463 184.697 67.3706 187.46 64.7458 187.256C62.1347 187.065 26.7817 183.322 26.7817 183.322C26.7817 183.322 21.4911 183.172 23.2683 179.047C25.0455 174.922 42.3255 124.47 42.3255 124.47C42.3255 124.47 43.5149 118.807 46.5225 119.378Z"
-        fill="#F97316"
+        d="M46.5225 119.378L85.4435 120.359C85.4435 120.359 89.8592 120.182 89.0663 123.476C88.2734 126.771 68.5463 184.697 68.5463 184.697C68.5463 184.697 67.3706 187.46 64.7458 187.256"
+        stroke="white"
+        stroke-width="1.15966"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       />
       <path
         d="M57.5192 155.154C59.5991 153.916 60.4629 151.543 59.4485 149.853C58.4342 148.163 55.9259 147.796 53.846 149.034C51.7661 150.272 50.9024 152.645 51.9167 154.335C52.931 156.025 55.4394 156.392 57.5192 155.154Z"
@@ -433,69 +458,7 @@ export function StudentCardSVG() {
       <path
         fill-rule="evenodd"
         clip-rule="evenodd"
-        d="M91.2268 118.508L90.926 115.349C90.926 115.349 87.4262 113.253 84.651 116.302C81.8895 119.352 79.5245 123.082 78.3351 124.416C77.1457 125.736 79.7705 127.506 83.1199 125.451C86.4829 123.381 88.3012 121.081 88.3012 121.081L91.2268 118.508Z"
-        fill="white"
-      />
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M5.26357 163.936C5.26357 163.936 44.7725 163.84 52.1821 169.544C59.5917 175.249 70.6515 214.783 70.6515 214.783L91.7867 213.993C91.7867 213.993 88.2322 253.146 79.7289 257.666C72.7704 261.368 41.095 264.227 24.4165 258.237C13.2474 253.119 7.53293 237.531 4.74407 226.177C1.95521 214.81 3.36331 211.924 3.36331 211.924L6.60331 203.184C6.60331 203.184 0.287359 174.159 1.0666 169.939C1.85951 165.705 5.26357 163.936 5.26357 163.936Z"
-        fill="black"
-      />
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M6.60331 203.184C6.60331 203.184 0.287359 174.16 1.0666 169.939C1.14863 169.504 1.25799 169.095 1.3947 168.728C12.6322 167.176 43.3917 169.667 47.0145 174.2C51.2115 179.469 56.051 206.751 56.051 206.751C56.051 206.751 48.8874 206.955 35.7087 206.015C22.5162 205.09 6.60331 203.184 6.60331 203.184Z"
-        fill="black"
-      />
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M91.0626 220.418C89.6408 231.717 86.059 254.289 79.7294 257.665C78.0479 258.563 74.8899 259.407 70.857 260.102C69.9684 259.203 69.0524 257.992 68.2458 256.372C65.58 250.967 64.5957 225.877 64.5957 225.877L91.0626 220.418Z"
-        fill="black"
-      />
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M60.9312 261.286C48.8872 262.212 34.1226 261.722 24.4163 258.237C13.2471 253.118 7.53268 237.53 4.74382 226.177C3.04863 219.275 2.89825 215.504 3.04863 213.598C7.64205 213.652 20.1509 213.992 34.2183 216.034C51.9495 218.607 52.7424 222.637 55.3125 231.091C57.1171 237.054 59.6052 252.587 60.9312 261.286Z"
-        fill="black"
-      />
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M45.0186 62.5275L46.1122 61.0845C46.1122 61.0845 46.1943 56.5784 47.1512 53.3791C48.1082 50.1936 51.9224 50.5067 51.4986 52.399C51.0748 54.2913 51.0611 59.8865 51.0611 59.8865C49.2292 60.6761 47.1786 61.5746 45.0186 62.5275Z"
-        fill="white"
-      />
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M219.991 173.751C219.991 173.751 217.667 172.716 216.478 174.881C215.302 177.046 204.475 196.322 204.475 196.322L197.612 207.772C197.612 207.772 195.562 210.413 197.858 211.978C200.155 213.557 214.523 220.242 214.523 220.242C214.523 220.242 217.544 222.406 219.814 218.676C222.083 214.932 238.529 185.772 238.529 185.772C238.529 185.772 240.621 182.505 237.832 181.225C235.043 179.945 219.991 173.751 219.991 173.751Z"
-        fill="white"
-        stroke="#F97316"
-        stroke-width="1.15966"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M188.762 28.7619C188.762 28.7619 190.142 26.1889 192.125 26.8288C193.218 27.1827 193.56 28.9389 193.929 30.8857C194.244 32.5193 194.599 34.3027 195.351 35.242C196.267 36.372 196.281 34.7383 196.281 34.7383L197.21 34.7519C197.21 34.7655 197.183 38.9722 194.627 35.8274C193.724 34.6975 193.355 32.7916 193.013 31.049C192.699 29.3882 192.398 27.8907 191.838 27.7137C190.607 27.3189 189.582 29.2112 189.568 29.2112L188.762 28.7619Z"
-        fill="black"
-      />
-      <path
-        d="M156.573 138.179L153.114 136.545"
-        stroke="black"
-        stroke-width="1.15966"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M156.901 136.069C155.712 136.028 154.317 136.028 153.114 136.545"
-        stroke="black"
-        stroke-width="1.15966"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M90.926 115.349C90.926 115.349 87.4262 113.253 84.6511 116.302C81.8895 119.352 79.5245 123.082 78.3351 124.416C77.1457 125.736 79.7705 127.506 83.1199 125.451C86.483 123.381 88.3012 121.081 88.3012 121.081"
+        d="M91.2268 118.508L90.926 115.349C90.926 115.349 87.4262 113.253 84.651 116.302C81.8895 119.352 79.5245 123.082 78.3351 124.416C77.1457 125.736 79.7705 127.506 83.1199 125.451C86.483 123.381 88.3012 121.081 88.3012 121.081"
         stroke="black"
         stroke-width="1.15966"
         stroke-linecap="round"

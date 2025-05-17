@@ -22,6 +22,7 @@ import {
   faExclamationTriangle,
   faMoneyBillAlt,
   faFilePen,
+  faUserGraduate,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ListItemIcon, Typography } from "@mui/material";
@@ -129,6 +130,7 @@ export default function MiniDrawer() {
             "Complaints",
             "Fees",
             "Exams",
+            "Grades",
           ].map((text, index) => (
             <ListItem key={text} disablePadding sx={{ display: "block" }}>
               <ListItemButton
@@ -140,6 +142,7 @@ export default function MiniDrawer() {
                   index === 4 && navigate("/admin/complaints");
                   index === 5 && navigate("/admin/fees");
                   index === 6 && navigate("/admin/exams");
+                  index === 7 && navigate("/admin/grades");
                 }}
                 sx={[
                   {
@@ -179,6 +182,7 @@ export default function MiniDrawer() {
                   )}
                   {index === 5 && <FontAwesomeIcon icon={faMoneyBillAlt} />}
                   {index === 6 && <FontAwesomeIcon icon={faFilePen} />}
+                  {index === 7 && <FontAwesomeIcon icon={faUserGraduate} />}
                 </ListItemIcon>
                 <ListItemText
                   primary={text}

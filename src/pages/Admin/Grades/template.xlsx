@@ -1,0 +1,40 @@
+// Create a new Excel file with sample data
+const workbook = XLSX.utils.book_new();
+
+// Sample data
+const data = [
+  {
+    studentId: "2021001",
+    courseCode: "CS101",
+    courseName: "Introduction to Programming",
+    score: 85,
+    grade: "A",
+    term: "Fall 2023",
+    dateGraded: "2023-12-15",
+    creditHours: 3,
+    isRetake: false,
+    attemptNumber: 1
+  },
+  {
+    studentId: "2021002",
+    courseCode: "CS201",
+    courseName: "Data Structures",
+    score: 78,
+    grade: "B+",
+    term: "Fall 2023",
+    dateGraded: "2023-12-20",
+    creditHours: 4,
+    isRetake: false,
+    attemptNumber: 1
+  },
+  // Add more sample data...
+];
+
+// Convert data to worksheet
+const worksheet = XLSX.utils.json_to_sheet(data);
+
+// Add the worksheet to the workbook
+XLSX.utils.book_append_sheet(workbook, worksheet, "Grades");
+
+// Write the workbook to file
+XLSX.writeFile(workbook, "template.xlsx"); 

@@ -21,6 +21,7 @@ const Dashboard = () => {
     { label: "Complaints", path: "/admin/complaints" },
     { label: "Fees", path: "/admin/fees" },
     { label: "Exams", path: "/admin/exams" },
+    { label: "Grades", path: "/admin/grades" },
   ];
 
   return (

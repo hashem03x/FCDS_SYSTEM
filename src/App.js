@@ -20,6 +20,7 @@ import Sections from "./pages/Admin/Sections";
 import Complaints from "./pages/Admin/Complaints";
 import Fees from "./pages/Admin/Fees";
 import Exams from "./pages/Admin/Exams";
+import Grades from "./pages/Admin/Grades";
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
             <Route path="complaints" element={<Complaints />} />
             <Route path="fees" element={<Fees />} />
             <Route path="exams" element={<Exams />} />
+            <Route path="grades" element={<Grades />} />
           </Route>
 
           {/* Student Routes */}
