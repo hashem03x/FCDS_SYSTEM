@@ -724,6 +724,7 @@ const UpcomingCourses = () => {
   const [upcomingCourses, setUpcomingCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user, authToken } = useAuth();
+  console.log("Auth Token:", authToken);
   useEffect(() => {
     const fetchTimetable = async () => {
       setIsLoading(true);
@@ -849,8 +850,10 @@ const Course = ({ course, index }) => {
         style={{
           backgroundColor: "#B9E3F0",
           height: "100%",
-          width: "150px",
+          width: "250px",
           padding: "20px",
+          fontWeight: "bold",
+          clipPath: "polygon(0% 0%, 90% 0%, 100% 50%, 90% 100%, 0% 100%)",
         }}
         className="d-flex flex-column text-center me-4"
       >
@@ -929,28 +932,27 @@ const NewAnnouncements = () => {
   );
 };
 
-const Announcment = ({data}) => {
-
-  const { content , createdAt , sender} = data
+const Announcment = ({ data }) => {
+  const { content, createdAt, sender } = data;
 
   function stringAvatar(name) {
     const initials = name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
       .toUpperCase();
-  
+
     return {
       children: initials,
     };
   }
-  
+
   const localDate = new Date(createdAt).toLocaleString("en-EG", {
     timeZone: "Africa/Cairo",
     dateStyle: "full",
-    timeStyle: "short"
+    timeStyle: "short",
   });
-  
+
   return (
     <Box sx={{ width: "100%", borderRadius: 4, bgcolor: "#f7f7f7" }}>
       <Stack
@@ -967,10 +969,14 @@ const Announcment = ({data}) => {
         sx={{ bgcolor: "#e0f7fa", borderRadius: 3, p: 2, position: "relative" }}
       >
         <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-        <Avatar {...stringAvatar(sender.name)} alt={sender.name} sx={{ width: 40, height: 40, mr: 1 }} />
-        <Box>
+          <Avatar
+            {...stringAvatar(sender.name)}
+            alt={sender.name}
+            sx={{ width: 40, height: 40, mr: 1 }}
+          />
+          <Box>
             <Typography variant="subtitle2" fontWeight="bold">
-            {sender.name}
+              {sender.name}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {localDate}

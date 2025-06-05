@@ -10,7 +10,7 @@ const ExamCard = ({ exam }) => {
   const dayNum = date.toLocaleDateString("en-GB").split("/")[0];
 
   return (
-    <>
+    <div className="d-flex align-item-center gap-3">
       <Box
         display="flex"
         alignItems="center"
@@ -60,7 +60,7 @@ const ExamCard = ({ exam }) => {
           🏛️ <Typography color="#373C61">{exam.location}</Typography>
         </Box>
       </Paper>
-    </>
+    </div>
   );
 };
 

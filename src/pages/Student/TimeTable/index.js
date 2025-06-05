@@ -20,7 +20,7 @@ const Timetable = ({ data }) => {
     const fetchTimeTable = async () => {
       setIsLoading(true);
       const response = await fetch(
-        `${BASE_URL}/api/student/time-table/${user.id}`,
+        `${BASE_URL}/api/student/time-table/${user?.id}`,
         {
           method: "GET",
           headers: {

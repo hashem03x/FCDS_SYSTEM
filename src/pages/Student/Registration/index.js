@@ -23,7 +23,7 @@ function Registration() {
   const [selectedSections, setSelectedSections] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [schedule, setSchedule] = useState({});
-  const { user , authToken} = useAuth();
+  const { user  , authToken} = useAuth();
 
   const fetchCourses = async () => {
     try {
@@ -289,7 +289,7 @@ function CoursesTable({
   fetchCourses,
   setIsLoading,
 }) {
-  const { user } = useAuth();
+  const { user , authToken} = useAuth();
   const [isSaving, setIsSaving] = useState(false);
 
   const handleClearAll = () => {
@@ -322,7 +322,7 @@ function CoursesTable({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({ courseCodes: registeredCourses }),
         }
@@ -345,7 +345,7 @@ function CoursesTable({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({ registrations }),
         }
@@ -409,7 +409,7 @@ function CoursesTable({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("AuthToken")}`,
+            Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({ courseCode: course.code }), // notice "courseCodes" (plural)
         }

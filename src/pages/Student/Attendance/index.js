@@ -64,33 +64,42 @@ const Attendance = () => {
 
       const contentType = res.headers.get("content-type");
 
-      if (!res.ok) {
-        if (contentType && contentType.includes("application/json")) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Unknown server error");
-        } else {
-          throw new Error("Server error (non-JSON response)");
+      if (res.ok || res.status === 200) {
+        if (res.status === 400) {
+          Swal.fire({
+            icon: "error",
+            title: "Face Not Found",
+            text: "Please ensure your face is clearly visible in the frame.",
+          });
         }
+      }
+
+      if (res.status === 400) {
+        const errorData = await res.json();
+        Swal.fire({
+          icon: "error",
+          title: "No face Detected",
+          text: `Please ensure your face is clearly visible in the frame.`,
+        });
+        return;
       }
 
       const data = await res.json();
       setResponse(data);
 
       // ✅ Success alert
-      console.log("NAME" , user?.name)
-      if (data.label ) {
+      console.log("NAME", user?.name);
+      if (data?.label !== "unknown" && data?.confidence >= 0.95) {
         Swal.fire({
           icon: "success",
           title: "Verification Successful",
-          text: `Welcome, ${data.label}!\nConfidence: ${(
-            data.confidence * 100
-          ).toFixed(2)}%`,
+          text: `${data?.message}`,
         });
       } else {
         Swal.fire({
           icon: "error",
-          title: "Unauthorized User",
-          text: `You are not authorized.`,
+          title: "Unrecognized Face",
+          text: "Please try again or contact college admin if you belive it's a mistake.",
         });
       }
     } finally {
@@ -166,13 +175,13 @@ const Attendance = () => {
         </CardContent>
       </Card>
 
-      {response && (
+      {/* {response && (
         <Alert sx={{ mt: 3 }} severity="success">
           {`Welcome, ${response.label} (Confidence: ${(
             response.confidence * 100
           ).toFixed(2)}%)`}
         </Alert>
-      )}
+      )} */}
 
       <Snackbar
         open={openSnackbar}
@@ -190,3 +199,30 @@ const Attendance = () => {
 };
 
 export default Attendance;
+
+export async function encryptNumber(number, keyString) {
+  const encoder = new TextEncoder();
+  const plaintext = encoder.encode(number.toString());
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(keyString),
+    { name: "AES-GCM" },
+    false,
+    ["encrypt"]
+  );
+
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    plaintext
+  );
+
+  // Combine iv + ciphertext
+  const encryptedBytes = new Uint8Array([...iv, ...new Uint8Array(ciphertext)]);
+
+  return btoa(String.fromCharCode(...encryptedBytes));
+}
+
+
