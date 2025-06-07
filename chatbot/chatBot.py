@@ -28,10 +28,15 @@ class CollegeSystemChatbot:
         # Student ID and name
         self.student_id = None
         self.student_name = None
-        
-        # Start conversation
-        self.get_student_id()
-        self.show_welcome()
+
+    def initialize_student(self, student_id):
+        """Initialize student session with given ID"""
+        self.student_id = student_id
+        student = self.users.find_one({"id": self.student_id, "role": "student"})
+        if student:
+            self.student_name = student.get('name', 'Student')
+            return True, f"Hello {self.student_name}, ID: {self.student_id}"
+        return False, "Student ID not found in the database"
     
     def get_student_id(self):
         """Prompt the user to enter their student ID at startup"""
@@ -256,178 +261,204 @@ class CollegeSystemChatbot:
     # Response display methods
     def show_announcements(self, announcements):
         if not announcements:
-            return "No announcements found."
+            return {"type": "text", "content": "No announcements found."}
         
         announcements_list = []
         for ann in announcements:
             announcements_list.append({
-                'Title': ann['title'],
-                'Content': ann['content'],
-                'Course': ann.get('courseCode', 'N/A'),
-                'From': ann['senderDetails'].get('name', ann['sender']),
-                'Date': ann['createdAt'].strftime('%Y-%m-%d') if isinstance(ann['createdAt'], datetime) else ann['createdAt']
+                'content': ann['content'],
+                'course': ann.get('courseCode', 'N/A'),
+                'from': ann['senderDetails'].get('name', ann['sender']),
+                'date': ann['createdAt'].strftime('%Y-%m-%d') if isinstance(ann['createdAt'], datetime) else ann['createdAt']
             })
         
-        df = pd.DataFrame(announcements_list)
-        return df.to_string(index=False)
+        return {
+            "type": "announcement",
+            "title": "Announcements",
+            "headers": [ "Content", "Course", "From", "Date"],
+            "data": announcements_list
+        }
     
     def show_complaints(self, complaints):
         if not complaints:
-            return "No complaints found."
+            return {"type": "text", "content": "No complaints found."}
         
         complaints_list = []
         for comp in complaints:
             complaints_list.append({
-                'User ID': comp['userId'],
-                'Role': comp['role'],
-                'Complaint': comp['complaint'],
-                'Status': comp['status'],
-                'Date': comp['createdAt'].strftime('%Y-%m-%d') if isinstance(comp['createdAt'], datetime) else comp['createdAt']
+                'userId': comp['userId'],
+                'role': comp['role'],
+                'complaint': comp['complaint'],
+                'status': comp['status'],
+                'date': comp['createdAt'].strftime('%Y-%m-%d') if isinstance(comp['createdAt'], datetime) else comp['createdAt']
             })
         
-        df = pd.DataFrame(complaints_list)
-        return df.to_string(index=False)
+        return {
+            "type": "table",
+            "title": "Complaints",
+            "headers": ["User ID", "Role", "Complaint", "Status", "Date"],
+            "data": complaints_list
+        }
     
     def show_courses(self, courses, title="Courses"):
         if not courses:
-            return f"""
-            No courses found
-            There are currently no courses matching your criteria.
-            """
+            return {
+                "type": "text",
+                "content": "No courses found matching your criteria."
+            }
         
         courses_list = []
         for course in courses:
             doctor_name = self.get_doctor_name(course['doctorId'])
             courses_list.append({
-                'Code': course['code'],
-                'Name': course['name'],
-                'Doctor': doctor_name,
-                'Department': course['department'],
-                'Credit Hours': course.get('creditHours', 'N/A'),
-                'Semester': course.get('semester', 'N/A')
+                'code': course['code'],
+                'name': course['name'],
+                'doctor': doctor_name,
+                'department': course['department'],
+                'creditHours': course.get('creditHours', 'N/A'),
+                'semester': course.get('semester', 'N/A')
             })
         
-        df = pd.DataFrame(courses_list)
-        return f"{title}\n{df.to_string(index=False)}"
+        return {
+            "type": "table",
+            "title": title,
+            "headers": ["Code", "Name", "Doctor", "Department", "Credit hours", "Semester"],
+            "data": courses_list
+        }
     
     def show_exams(self, exams, title="Exams"):
         if not exams:
-            return f"""
-            No Exams Found
-            There are currently no exams matching your criteria.
-            """
+            return {
+                "type": "text",
+                "content": "No exams found matching your criteria."
+            }
         
         exam_data = []
         for exam in exams:
-            # Handle room display - show all rooms if available
             rooms = ", ".join(exam.get('roomNumbers', [])) if exam.get('roomNumbers') else "Not assigned"
             
             exam_data.append({
-                'Course': f"{exam['courseName']} ({exam['courseCode']})",
-                'Type': exam['examType'],
-                'Date': exam['examDate'],
-                'Time': f"{exam['startTime']} - {exam['endTime']}",
-                'Rooms': rooms,
-                'Semester': exam.get('semester', 'N/A'),
-                'Department': exam.get('department', 'N/A')
+                'course': f"{exam['courseName']} ({exam['courseCode']})",
+                'type': exam['examType'],
+                'date': exam['examDate'],
+                'time': f"{exam['startTime']} - {exam['endTime']}",
+                'rooms': rooms,
+                'semester': exam.get('semester', 'N/A'),
+                'department': exam.get('department', 'N/A')
             })
         
-        df = pd.DataFrame(exam_data)
-        return f"{title}\n{df.to_string(index=False)}"
+        return {
+            "type": "table",
+            "title": title,
+            "headers": ["Course", "Type", "Date", "Time", "Rooms", "Semester", "Department"],
+            "data": exam_data
+        }
     
     def show_grades(self, grades):
         if not grades:
-            return f"""
-            No grades found for {self.student_name}
-            Possible reasons:
-            - No courses graded yet
-            - You are not registered in any courses
-            
-            Please contact your instructor for more information.
-            """
+            return {
+                "type": "text",
+                "content": f"No grades found for {self.student_name}. Please contact your instructor for more information."
+            }
         
         grades_list = []
         for grade in grades:
             grades_list.append({
-                'Course': grade['courseName'],
-                'Code': grade['courseCode'],
-                'Score': grade['score'],
-                'Grade': grade['grade'],
-                'Term': grade['term'],
-                'Date': grade['dateGraded'].strftime('%Y-%m-%d') if isinstance(grade['dateGraded'], datetime) else grade['dateGraded']
+                'course': grade['courseName'],
+                'code': grade['courseCode'],
+                'score': grade['score'],
+                'grade': grade['grade'],
+                'term': grade['term'],
+                'date': grade['dateGraded'].strftime('%Y-%m-%d') if isinstance(grade['dateGraded'], datetime) else grade['dateGraded']
             })
         
-        df = pd.DataFrame(grades_list)
-        return df.to_string(index=False)
+        return {
+            "type": "table",
+            "title": "Grades",
+            "headers": ["Course", "Code", "Score", "Grade", "Term", "Date"],
+            "data": grades_list
+        }
     
     def show_doctor_info(self, doctor, course=None):
-        response = f"""
-        {course['name'] if course else 'Doctor Information'}
-        Name: {doctor['name']}
-        Email: {doctor.get('email', 'N/A')}
-        """
-        
-        # Get all courses taught by this doctor
         courses_taught = list(self.courses.find({"doctorId": doctor['id']}))
-        if courses_taught:
-            response += "\nCourses Teaching:\n"
-            for c in courses_taught:
-                if course and c['code'] == course['code']:
-                    continue  # Skip if it's the current course
-                response += f"- {c['code']}: {c['name']}\n"
+        courses_list = []
+        for c in courses_taught:
+            if course and c['code'] == course['code']:
+                continue
+            courses_list.append({
+                'code': c['code'],
+                'name': c['name']
+            })
         
-        return response
+        return {
+            "type": "doctor_info",
+            "title": course['name'] if course else 'Doctor Information',
+            "data": {
+                "name": doctor['name'],
+                "email": doctor.get('email', 'N/A'),
+                "courses": courses_list
+            }
+        }
     
     def show_course_detail(self, course):
         if not course:
-            return "Course not found."
+            return {"type": "text", "content": "Course not found."}
         
         doctor = self.users.find_one({"id": course['doctorId'], "role": "doctor"})
         if not doctor:
-            return f"Course found but could not find instructor with ID {course['doctorId']}"
+            return {"type": "text", "content": f"Course found but could not find instructor with ID {course['doctorId']}"}
         
-        details = f"""
-        {course['code']}: {course['name']}
-        Instructor: {doctor['name']}
-        Department: {course['department']}
-        Credit Hours: {course['creditHours']}
-        Semester: {course['semester']}
-        """
+        lecture_sessions = []
+        for session in course.get('lectureSessions', []):
+            lecture_sessions.append({
+                'day': session['day'],
+                'time': f"{session['startTime']}-{session['endTime']}",
+                'room': session['room']
+            })
         
-        # Add lecture sessions
-        if course.get('lectureSessions'):
-            details += "\nLecture Sessions:\n"
-            for session in course['lectureSessions']:
-                details += f"- {session['day']}: {session['startTime']}-{session['endTime']} (Room: {session['room']})\n"
+        sections = []
+        for section in course.get('sections', []):
+            ta_name = self.get_doctor_name(section['taId']) if 'taId' in section else "TA Not Assigned"
+            section_sessions = []
+            for session in section.get('sessions', []):
+                section_sessions.append({
+                    'day': session['day'],
+                    'time': f"{session['startTime']}-{session['endTime']}",
+                    'room': session['room']
+                })
+            sections.append({
+                'sectionId': section.get('sectionId', 'Unnamed Section'),
+                'ta': ta_name,
+                'sessions': section_sessions
+            })
         
-        # Add sections
-        if course.get('sections'):
-            details += "\nSections:\n"
-            for section in course['sections']:
-                ta_name = self.get_doctor_name(section['taId']) if 'taId' in section else "TA Not Assigned"
-                details += f"\n{section.get('sectionId', 'Unnamed Section')} (TA: {ta_name})\n"
-                for session in section.get('sessions', []):
-                    details += f"- {session['day']}: {session['startTime']}-{session['endTime']} (Room: {session['room']})\n"
-        
-        return details
+        return {
+            "type": "course_detail",
+            "data": {
+                "code": course['code'],
+                "name": course['name'],
+                "instructor": doctor['name'],
+                "department": course['department'],
+                "creditHours": course['creditHours'],
+                "semester": course['semester'],
+                "lectureSessions": lecture_sessions,
+                "sections": sections
+            }
+        }
     
     def show_schedule(self, schedule):
         if not schedule:
-            return """
-            No Schedule Found
-            You don't appear to be registered in any courses this semester.
-            Please contact your academic advisor if this is incorrect.
-            """
+            return {
+                "type": "text",
+                "content": "No schedule found. You don't appear to be registered in any courses this semester. Please contact your academic advisor if this is incorrect."
+            }
         
-        # Convert to DataFrame for nice display
-        df = pd.DataFrame(schedule)
-        
-        # Group by day for better organization
-        days_order = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        df['Day'] = pd.Categorical(df['Day'], categories=days_order, ordered=True)
-        df = df.sort_values('Day')
-        
-        return f"Your Class Schedule\n{df.to_string(index=False)}"
+        return {
+            "type": "table",
+            "title": "Your Class Schedule",
+            "headers": ["Type", "Course", "Day", "Time", "Room", "Instructor", "Section"],
+            "data": schedule
+        }
     
     def chat(self):
         while True:
@@ -479,7 +510,7 @@ class CollegeSystemChatbot:
 # Create a single instance of the chatbot
 chatbot = CollegeSystemChatbot()
 
-@app.route('/initChatBot', methods=['POST'])
+@app.route('/initialize', methods=['POST'])
 def initialize():
     data = request.get_json()
     student_id = data.get('student_id')
