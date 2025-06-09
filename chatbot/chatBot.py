@@ -29,6 +29,42 @@ class CollegeSystemChatbot:
         self.student_id = None
         self.student_name = None
 
+        # Conversational responses
+        self.responses = {
+            'greeting': "Hello {name}! How can I help you today?",
+            'farewell': "Goodbye {name}! Have a great day!",
+            'not_understood': "I'm not sure I understand. Could you please rephrase your question?",
+            'no_data': "I couldn't find any information about that.",
+            'help': """Here are some things you can ask me about:
+- Your courses and schedule
+- Upcoming exams
+- Your grades
+- Announcements
+- Complaints
+- Course information
+- Professor information
+
+You can ask in natural language, like:
+- "What courses am I taking?"
+- "When are my exams?"
+- "Show me my grades"
+- "Tell me about my schedule"
+- "Who teaches Calculus?"
+- "What's new in announcements?" """
+        }
+
+        # Common variations of keywords
+        self.keyword_variations = {
+            'announcement': ['announcement', 'news', 'update', 'new', 'latest', 'recent'],
+            'complaint': ['complaint', 'issue', 'problem', 'concern', 'report'],
+            'course': ['course', 'subject', 'class', 'lecture', 'module'],
+            'exam': ['exam', 'test', 'quiz', 'midterm', 'final'],
+            'grade': ['grade', 'mark', 'score', 'result', 'performance'],
+            'schedule': ['schedule', 'timetable', 'when is my class', 'class time', 'lecture time'],
+            'professor': ['professor', 'instructor', 'teacher', 'lecturer', 'doctor'],
+            'help': ['help', 'what can you do', 'how can you help', 'what do you know', 'show options']
+        }
+
     def initialize_student(self, student_id):
         """Initialize student session with given ID"""
         self.student_id = student_id
@@ -52,40 +88,6 @@ class CollegeSystemChatbot:
                 else:
                     print("\nStudent ID not found in the database. Please try again.\n")
                     self.student_id = None  # Reset to prompt again
-    
-    def show_welcome(self):
-        welcome_msg = f"""
-        🏫 College System Chatbot  
-        👤 Student: {self.student_name} (ID: {self.student_id})  
-        
-        How can I help you today?  
-        
-        You can ask about:  
-        - 📢 Announcements  
-        - 📝 Complaints  
-        - 📚 Courses (search by name/code)  
-        - 📝 Exams  
-        - 📊 Grades  
-        - 👨‍🏫 Who teaches a course  
-        - 🗓️ My class schedule
-        - 📅 when are my classes
-        - 📖 What courses am I taking
-        
-        Examples:  
-        - show my courses
-        - what upcoming exams
-        - who teaches Calculus  
-        - get me my grades  
-        - info for programming 1
-        - when is my linear algebra class
-        - what's my schedule this semester
-        - which courses am I enrolled in
-        - info for Stochastic Processes
-        - courses (shows all available courses)
-        
-        Type 'exit' to quit
-        """
-        print(welcome_msg)
     
     # Database query methods
     def get_doctor_name(self, doctor_id):
@@ -460,52 +462,88 @@ class CollegeSystemChatbot:
             "data": schedule
         }
     
-    def chat(self):
-        while True:
-            user_input = input("\nYou: ").strip()
-            if user_input.lower() in ['exit', 'quit']:
-                print(f"\nGoodbye {self.student_name}!")
-                break
+    def get_conversational_response(self, response_type, name=None):
+        """Get a conversational response"""
+        response = self.responses[response_type]
+        if name:
+            response = response.format(name=name)
+        return response
+
+    def normalize_query(self, query):
+        """Normalize the query by expanding common variations"""
+        query_lower = query.lower().strip()
+        
+        # Check for help-related queries
+        if any(word in query_lower for word in self.keyword_variations['help']):
+            return 'help'
+            
+        # Expand variations to their main keywords
+        for main_keyword, variations in self.keyword_variations.items():
+            if any(var in query_lower for var in variations):
+                return main_keyword
                 
-            response = self.process_query(user_input)
-            print(f"\nBot:\n{response}")
-    
+        return query_lower
+
     def process_query(self, query):
         """Process user query and return response"""
-        query = query.lower().strip()
+        # Normalize the query
+        normalized_query = self.normalize_query(query)
+        
+        # Handle help request
+        if normalized_query == 'help':
+            return self.get_conversational_response('help')
         
         # Handle different types of queries
-        if any(word in query for word in ['announcement', 'news', 'update']):
+        if normalized_query == 'announcement':
             announcements = self.get_announcements()
-            return self.show_announcements(announcements)
+            response = self.show_announcements(announcements)
+            if isinstance(response, dict) and response.get('type') == 'text' and 'No announcements found' in response['content']:
+                return self.get_conversational_response('no_data')
+            return response
             
-        elif any(word in query for word in ['complaint', 'issue', 'problem']):
+        elif normalized_query == 'complaint':
             complaints = self.get_complaints(user_id=self.student_id)
-            return self.show_complaints(complaints)
+            response = self.show_complaints(complaints)
+            if isinstance(response, dict) and response.get('type') == 'text' and 'No complaints found' in response['content']:
+                return self.get_conversational_response('no_data')
+            return response
             
-        elif any(word in query for word in ['course', 'subject', 'class']):
-            if 'teach' in query or 'instructor' in query or 'professor' in query:
+        elif normalized_query == 'course':
+            if 'teach' in query.lower() or 'instructor' in query.lower() or 'professor' in query.lower():
                 courses = self.get_courses_by_name(query)
                 if courses:
                     return self.show_doctor_info(courses[0])
+                return self.get_conversational_response('no_data')
             else:
                 courses = self.get_student_courses_from_registered(self.student_id)
-                return self.show_courses(courses, "Your Courses")
+                response = self.show_courses(courses, "Your Courses")
+                if isinstance(response, dict) and response.get('type') == 'text' and 'No courses found' in response['content']:
+                    return self.get_conversational_response('no_data')
+                return response
                 
-        elif any(word in query for word in ['exam', 'test', 'quiz']):
+        elif normalized_query == 'exam':
             exams = self.get_exams(upcoming=True)
-            return self.show_exams(exams, "Upcoming Exams")
+            response = self.show_exams(exams, "Upcoming Exams")
+            if isinstance(response, dict) and response.get('type') == 'text' and 'No exams found' in response['content']:
+                return self.get_conversational_response('no_data')
+            return response
             
-        elif any(word in query for word in ['grade', 'mark', 'score']):
+        elif normalized_query == 'grade':
             grades = self.get_grades(student_id=self.student_id)
-            return self.show_grades(grades)
+            response = self.show_grades(grades)
+            if isinstance(response, dict) and response.get('type') == 'text' and 'No grades found' in response['content']:
+                return self.get_conversational_response('no_data')
+            return response
             
-        elif any(word in query for word in ['schedule', 'timetable', 'when is my class']):
+        elif normalized_query == 'schedule':
             schedule = self.get_student_schedule(self.student_id)
-            return self.show_schedule(schedule)
+            response = self.show_schedule(schedule)
+            if isinstance(response, dict) and response.get('type') == 'text' and 'No schedule found' in response['content']:
+                return self.get_conversational_response('no_data')
+            return response
             
         else:
-            return "I'm not sure how to help with that. Please try asking about announcements, courses, exams, grades, or your schedule."
+            return self.get_conversational_response('not_understood')
 
 # Create a single instance of the chatbot
 chatbot = CollegeSystemChatbot()

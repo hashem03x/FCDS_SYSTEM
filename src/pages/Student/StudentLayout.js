@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import { data, Outlet } from "react-router-dom";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { Outlet } from "react-router-dom";
 import { Box } from "@mui/material";
 import Header from "../../components/Header";
 import Sidebar from "./Dashboard/Sidebar"; // Import the Sidebar
@@ -8,32 +8,47 @@ import { faRobot } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../../context/AuthContext";
 import "./StudentLayout.css";
 
-const ChatbotWindow = ({ isOpen, onClose, studentId }) => {
+// API base URL
+const API_BASE_URL = "https://profound-balance-production.up.railway.app/";
+
+// Memoized API request function
+const makeApiRequest = async (endpoint, method = "POST", body = null) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : null,
+    });
+    return await response.json();
+  } catch (error) {
+    console.error(`API Error (${endpoint}):`, error);
+    throw error;
+  }
+};
+
+const ChatbotWindow = React.memo(({ isOpen, onClose, studentId }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
+  // Memoized scroll function
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  React.useEffect(() => {
-    if (isOpen && !isInitialized) {
-      // Initialize chatbot with student ID
-      fetch("http://127.0.0.1:5000/initialize", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ student_id: studentId }),
-      })
-        .then((response) => response.json())
-        .then((data) => {
+  // Memoized initialization effect
+  useEffect(() => {
+    const initializeChatbot = async () => {
+      if (isOpen && !isInitialized) {
+        try {
+          const data = await makeApiRequest("initialize", "POST", { student_id: studentId });
           if (data.success) {
             setIsInitialized(true);
             setMessages([
@@ -43,54 +58,59 @@ const ChatbotWindow = ({ isOpen, onClose, studentId }) => {
               },
             ]);
           }
-        })
-        .catch((error) => {
+        } catch (error) {
           console.error("Error initializing chatbot:", error);
-        });
-    }
+        }
+      }
+    };
+
+    initializeChatbot();
   }, [isOpen, isInitialized, studentId]);
 
-  const handleSendMessage = () => {
+  // Memoized message sending function
+  const handleSendMessage = useCallback(async () => {
     if (!inputMessage.trim()) return;
 
-    // Add user message to chat
-    setMessages((prev) => [...prev, { type: "user", content: inputMessage }]);
+    const userMessage = { type: "user", content: inputMessage };
+    setMessages((prev) => [...prev, userMessage]);
+    setInputMessage("");
 
-    // Send message to chatbot
-    fetch("http://127.0.0.1:5000/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ query: inputMessage }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          setMessages((prev) => [
-            ...prev,
-            { type: "bot", response: data.response },
-          ]);
-        }
-      })
-      .catch((error) => {
-        console.error("Error sending message:", error);
+    try {
+      const data = await makeApiRequest("chat", "POST", { query: inputMessage });
+      if (data.success) {
         setMessages((prev) => [
           ...prev,
-          {
-            type: "bot",
-            response: {
-              type: "text",
-              content: "Sorry, I encountered an error. Please try again.",
-            },
-          },
+          { type: "bot", response: data.response },
         ]);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "bot",
+          response: {
+            type: "text",
+            content: "Sorry, I encountered an error. Please try again.",
+          },
+        },
+      ]);
+    }
+  }, [inputMessage]);
+
+  // Memoized table data formatter
+  const formatTableData = useCallback((data, headers) => {
+    return data.map((row) => {
+      const rowData = {};
+      headers.forEach((header) => {
+        rowData[header.toLowerCase()] = row[header.toLowerCase()];
       });
+      return rowData;
+    });
+  }, []);
 
-    setInputMessage("");
-  };
-
-  const renderResponse = (response) => {
+  // Memoized response renderer
+  const renderResponse = useCallback((response) => {
     if (!response || !response.type) {
       return <div className="message-content error-message">{response}</div>;
     }
@@ -100,17 +120,7 @@ const ChatbotWindow = ({ isOpen, onClose, studentId }) => {
         return <div className="message-content">{response.content}</div>;
 
       case "table":
-        // Extract structured data
-        const formattedTableData = response.data.map((row) => {
-          const rowData = {};
-          response.headers.forEach((header) => {
-            rowData[header.toLowerCase()] = row[header.toLowerCase()];
-          });
-          return rowData;
-        });
-
-        console.log("Formatted Table Data:", formattedTableData); // You can remove or replace this
-
+        const formattedTableData = formatTableData(response.data, response.headers);
         return (
           <div className="message-content">
             <h4 className="response-title">{response.title}</h4>
@@ -124,10 +134,12 @@ const ChatbotWindow = ({ isOpen, onClose, studentId }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {formattedTableData.map((data) => (
-                    <tr>
+                  {formattedTableData.map((data, rowIndex) => (
+                    <tr key={rowIndex}>
                       {response.headers.map((header, index) => (
-                        <td className="w-100" key={index}>{data[header.toLowerCase()]}</td>
+                        <td className="w-100" key={index}>
+                          {data[header.toLowerCase()]}
+                        </td>
                       ))}
                     </tr>
                   ))}
@@ -258,7 +270,20 @@ const ChatbotWindow = ({ isOpen, onClose, studentId }) => {
           </div>
         );
     }
-  };
+  }, [formatTableData]);
+
+  // Memoized message list
+  const messageList = useMemo(() => {
+    return messages.map((message, index) => (
+      <div key={index} className={`message ${message.type}`}>
+        {message.type === "user" ? (
+          <div className="message-content">{message.content}</div>
+        ) : (
+          renderResponse(message?.response)
+        )}
+      </div>
+    ));
+  }, [messages, renderResponse]);
 
   return (
     <div className={`chatbot-window ${isOpen ? "open" : ""}`}>
@@ -288,15 +313,7 @@ const ChatbotWindow = ({ isOpen, onClose, studentId }) => {
             </p>
           </div>
         </div>
-        {messages.map((message, index) => (
-          <div key={index} className={`message ${message.type}`}>
-            {message.type === "user" ? (
-              <div className="message-content">{message.content}</div>
-            ) : (
-              renderResponse(message?.response)
-            )}
-          </div>
-        ))}
+        {messageList}
         <div ref={messagesEndRef} />
       </div>
       <div className="chatbot-input">
@@ -311,16 +328,21 @@ const ChatbotWindow = ({ isOpen, onClose, studentId }) => {
       </div>
     </div>
   );
-};
+});
 
-const StudentLayout = () => {
+// Memoized StudentLayout component
+const StudentLayout = React.memo(() => {
   const [open, setOpen] = useState(true);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const { user } = useAuth();
 
-  const handleDrawerClose = () => {
-    setOpen(false); // Close drawer when button is clicked
-  };
+  const handleDrawerClose = useCallback(() => {
+    setOpen(false);
+  }, []);
+
+  const toggleChatbot = useCallback(() => {
+    setIsChatbotOpen((prev) => !prev);
+  }, []);
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -339,7 +361,7 @@ const StudentLayout = () => {
         {/* Chatbot Button */}
         <button
           className="chatbot-button"
-          onClick={() => setIsChatbotOpen(true)}
+          onClick={toggleChatbot}
         >
           <FontAwesomeIcon icon={faRobot} />
         </button>
@@ -353,6 +375,6 @@ const StudentLayout = () => {
       </Box>
     </Box>
   );
-};
+});
 
 export default StudentLayout;

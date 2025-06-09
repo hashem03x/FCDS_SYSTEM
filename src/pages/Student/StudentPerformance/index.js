@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   TableContainer,
   Table,
@@ -8,6 +8,9 @@ import {
   TableBody,
   Paper,
   TablePagination,
+  Card,
+  CardContent,
+  Grid,
 } from "@mui/material";
 import { BASE_URL } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
@@ -43,6 +46,9 @@ function StudentPerformance() {
     }
   };
 
+
+
+    console.log(passedCourses)
   useEffect(() => {
     if (!user?.id || !authToken) return;
     fetchPerformance();
@@ -64,6 +70,28 @@ function StudentPerformance() {
 }
 
 const PerformanceSummary = ({ performance, passedCourses }) => {
+  // Memoize the highest and lowest marks calculation
+  const { highestMark, lowestMark } = useMemo(() => {
+    if (!passedCourses || passedCourses.length === 0) {
+      return { highestMark: null, lowestMark: null };
+    }
+
+    const marks = passedCourses.map(course => ({
+      course: course.name,
+      score: course.score,
+      grade: course.grade
+    }));
+    const highest = marks.reduce((prev, current) => 
+      (prev.score > current.score) ? prev : current
+    );
+
+    const lowest = marks.reduce((prev, current) => 
+      (prev.score < current.score) ? prev : current
+    );
+
+    return { highestMark: highest, lowestMark: lowest };
+  }, [passedCourses]);
+
   return (
     <>
       <Box
@@ -72,6 +100,7 @@ const PerformanceSummary = ({ performance, passedCourses }) => {
           borderRadius: "30px",
           backgroundColor: "white",
           padding: "24px 32px",
+          marginBottom: "24px",
         }}
       >
         <div className="row flex-wrap">
@@ -267,6 +296,78 @@ const PerformanceSummary = ({ performance, passedCourses }) => {
           </div>
         </div>
       </Box>
+
+      {/* Highest and Lowest Marks Section */}
+      <Grid container spacing={3} sx={{ marginBottom: "24px" }}>
+        <Grid item xs={12} md={6}>
+          <Card 
+            sx={{ 
+              borderRadius: "15px",
+              boxShadow: "0px 10px 60px 0px #E2ECF980",
+              height: "100%",
+              background: "linear-gradient(135deg, #EFFFF6 0%, #D3FFE7 100%)"
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                Highest Mark
+              </Typography>
+              {highestMark ? (
+                <>
+                  <Typography variant="h4" color="primary" sx={{ fontWeight: "bold", mb: 1 }}>
+                    {highestMark.score}/100
+                  </Typography>
+                  <Typography variant="subtitle1" color="text.primary">
+                    {highestMark.course}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Grade: {highestMark.grade}
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="body1" color="text.secondary">
+                  No courses completed yet
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Card 
+            sx={{ 
+              borderRadius: "15px",
+              boxShadow: "0px 10px 60px 0px #E2ECF980",
+              height: "100%",
+              background: "linear-gradient(135deg, #FFF5F5 0%, #FFE5E5 100%)"
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                Lowest Mark
+              </Typography>
+              {lowestMark ? (
+                <>
+                  <Typography variant="h4" color="error" sx={{ fontWeight: "bold", mb: 1 }}>
+                    {lowestMark.score}/100
+                  </Typography>
+                  <Typography variant="subtitle1" color="text.primary">
+                    {lowestMark.course}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Grade: {lowestMark.grade}
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="body1" color="text.secondary">
+                  No courses completed yet
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       <CoursesTable passedCourses={passedCourses} />
     </>
   );

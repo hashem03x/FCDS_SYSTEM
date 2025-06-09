@@ -98,7 +98,7 @@ function Settings() {
               />
               <Button
                 variant="contained"
-                sx={{ backgroundColor: "#DE8811" }}
+                sx={{ backgroundColor: "#2294f2" }}
                 startIcon={
                   loading ? (
                     <CircularProgress size={18} sx={{ color: "#fff" }} />
@@ -204,7 +204,7 @@ const ChangePasswordCard = () => {
         <Stack spacing={2}>
           <Button
             variant="contained"
-            sx={{ backgroundColor: "#DE8811" }}
+            sx={{ backgroundColor: "#2294f2" }}
             startIcon={<FontAwesomeIcon icon={faLock} />}
             onClick={handleToggle}
           >

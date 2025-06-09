@@ -20,6 +20,13 @@ import {
   TextField,
   MenuItem,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Grid,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -28,9 +35,11 @@ import {
   faPlus,
   faEdit,
   faTrash,
+  faArrowLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import { BASE_URL } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
+import { useAdmin } from "../../../context/AdminContext";
 
 const departments = [
   "Computing and Data Science",
@@ -43,10 +52,32 @@ const departments = [
 const academicLevels = ["First", "Second", "Third", "Fourth"];
 const examTypes = ["Final", "Midterm", "Quiz", "Assignment"];
 const today = new Date().toISOString().split("T")[0];
+
+const initialFormState = {
+  examId: "",
+  courseCode: "",
+  courseName: "",
+  examDate: "",
+  startTime: "",
+  endTime: "",
+  roomNumbers: [],
+  roomCapacity: 100,
+  semester: "",
+  examType: "",
+  academicLevel: "",
+  department: "",
+};
+
 export default function Exams() {
   const { authToken } = useAuth();
+  const { courses, loading: coursesLoading } = useAdmin();
   const [examsData, setExamsData] = useState({});
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [editingExam, setEditingExam] = useState(null);
+  const [formData, setFormData] = useState(initialFormState);
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [selectedYear, setSelectedYear] = useState(0);
 
   const fetchExams = async () => {
     try {
@@ -106,269 +137,70 @@ export default function Exams() {
     }
   };
 
-  const handleAddExam = async () => {
-    const { value: formValues } = await Swal.fire({
-      title: "Add New Exam",
-      html: `
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Exam ID</label>
-          <input id="examId" class="swal2-input" placeholder="Enter Exam ID">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Course Code</label>
-          <input id="courseCode" class="swal2-input" placeholder="Enter Course Code">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Course Name</label>
-          <input id="courseName" class="swal2-input" placeholder="Enter Course Name">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Exam Date</label>
-          <input id="examDate" min=${today} type="date" class="swal2-input">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Start Time</label>
-          <input id="startTime" class="swal2-input" placeholder="e.g. 09:00 AM">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">End Time</label>
-          <input id="endTime" class="swal2-input" placeholder="e.g. 11:00 AM">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Rooms (comma-separated)</label>
-          <input id="roomNumbers" class="swal2-input" placeholder="e.g. Room 101, Room 102">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Semester</label>
-          <input id="semester" class="swal2-input" placeholder="Enter Semester">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Exam Type</label>
-          <select id="examType" class="swal2-input">
-            ${examTypes
-              .map((type) => `<option value="${type}">${type}</option>`)
-              .join("")}
-          </select>
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Academic Level</label>
-          <select id="academicLevel" class="swal2-input">
-            ${academicLevels
-              .map((level) => `<option value="${level}">${level}</option>`)
-              .join("")}
-          </select>
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Department</label>
-          <select id="department" class="swal2-input">
-            ${departments
-              .map((dept) => `<option value="${dept}">${dept}</option>`)
-              .join("")}
-          </select>
-        </div>
-      `,
-      focusConfirm: false,
-      showCancelButton: true,
-      confirmButtonText: "Add Exam",
-      cancelButtonText: "Cancel",
-      preConfirm: () => {
-        const data = {
-          examId: document.getElementById("examId").value,
-          courseCode: document.getElementById("courseCode").value,
-          courseName: document.getElementById("courseName").value,
-          examDate: document.getElementById("examDate").value,
-          startTime: document.getElementById("startTime").value,
-          endTime: document.getElementById("endTime").value,
-          roomNumbers: document
-            .getElementById("roomNumbers")
-            .value.split(",")
-            .map((r) => r.trim()),
-          roomCapacity: 100,
-          semester: document.getElementById("semester").value,
-          examType: document.getElementById("examType").value,
-          academicLevel: document.getElementById("academicLevel").value,
-          department: document.getElementById("department").value,
-        };
+  const handleOpenForm = (exam = null) => {
+    setEditingExam(exam);
+    setFormData(exam || { ...initialFormState });
+    setOpen(true);
+  };
 
-        try {
-          validateExamData(data);
-          return data;
-        } catch (error) {
-          Swal.showValidationMessage(error.message);
-          return false;
-        }
-      },
-    });
+  const handleClose = () => {
+    setOpen(false);
+    setEditingExam(null);
+    setFormData(initialFormState);
+  };
 
-    if (formValues) {
-      try {
-        setLoading(true);
-        const response = await fetch(`${BASE_URL}/api/admin/add-exam`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify(formValues),
-        });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || "Failed to add exam");
-        }
-
-        Swal.fire("Success", "Exam added successfully", "success");
-        fetchExams();
-      } catch (err) {
-        Swal.fire("Error", err.message, "error");
-      } finally {
-        setLoading(false);
+    // If course code changes, update course name
+    if (name === "courseCode") {
+      const selectedCourse = courses.find((c) => c.code === value);
+      if (selectedCourse) {
+        setFormData((prev) => ({
+          ...prev,
+          courseName: selectedCourse.name,
+          department: selectedCourse.department,
+        }));
       }
     }
   };
 
-  const handleEditExam = async (exam) => {
-    const { value: formValues } = await Swal.fire({
-      title: "Edit Exam",
-      html: `
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Exam ID</label>
-          <input id="examId" class="swal2-input" value="${
-            exam.examId
-          }" readonly>
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Course Code</label>
-          <input id="courseCode" class="swal2-input" value="${exam.courseCode}">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Course Name</label>
-          <input id="courseName" class="swal2-input" value="${exam.courseName}">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Exam Date</label>
-          <input id="examDate" type="date" class="swal2-input" value="${
-            exam.examDate
-          }">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Start Time</label>
-          <input id="startTime" class="swal2-input" value="${exam.startTime}">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">End Time</label>
-          <input id="endTime" class="swal2-input" value="${exam.endTime}">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Rooms (comma-separated)</label>
-          <input id="roomNumbers" class="swal2-input" value="${exam.roomNumbers.join(
-            ", "
-          )}">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Semester</label>
-          <input id="semester" class="swal2-input" value="${exam.semester}">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Exam Type</label>
-          <select id="examType" class="swal2-input">
-            ${examTypes
-              .map(
-                (type) =>
-                  `<option value="${type}" ${
-                    type === exam.examType ? "selected" : ""
-                  }>${type}</option>`
-              )
-              .join("")}
-          </select>
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Academic Level</label>
-          <select id="academicLevel" class="swal2-input">
-            ${academicLevels
-              .map(
-                (level) =>
-                  `<option value="${level}" ${
-                    level === exam.academicLevel ? "selected" : ""
-                  }>${level}</option>`
-              )
-              .join("")}
-          </select>
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem;">Department</label>
-          <select id="department" class="swal2-input">
-            ${departments
-              .map(
-                (dept) =>
-                  `<option value="${dept}" ${
-                    dept === exam.department ? "selected" : ""
-                  }>${dept}</option>`
-              )
-              .join("")}
-          </select>
-        </div>
-      `,
-      focusConfirm: false,
-      showCancelButton: true,
-      confirmButtonText: "Update Exam",
-      cancelButtonText: "Cancel",
-      preConfirm: () => {
-        const data = {
-          examId: document.getElementById("examId").value,
-          courseCode: document.getElementById("courseCode").value,
-          courseName: document.getElementById("courseName").value,
-          examDate: document.getElementById("examDate").value,
-          startTime: document.getElementById("startTime").value,
-          endTime: document.getElementById("endTime").value,
-          roomNumbers: document
-            .getElementById("roomNumbers")
-            .value.split(",")
-            .map((r) => r.trim()),
-          roomCapacity: 100,
-          semester: document.getElementById("semester").value,
-          examType: document.getElementById("examType").value,
-          academicLevel: document.getElementById("academicLevel").value,
-          department: document.getElementById("department").value,
-        };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      validateExamData(formData);
+      setLoading(true);
 
-        try {
-          validateExamData(data);
-          return data;
-        } catch (error) {
-          Swal.showValidationMessage(error.message);
-          return false;
-        }
-      },
-    });
+      const url = editingExam
+        ? `${BASE_URL}/api/admin/update-exam/${editingExam.examId}`
+        : `${BASE_URL}/api/admin/add-exam`;
+      const method = editingExam ? "PUT" : "POST";
 
-    if (formValues) {
-      try {
-        setLoading(true);
-        const response = await fetch(
-          `${BASE_URL}/api/admin/update-exam/${exam.examId}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${authToken}`,
-            },
-            body: JSON.stringify(formValues),
-          }
-        );
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(formData),
+      });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || "Failed to update exam");
-        }
-
-        Swal.fire("Success", "Exam updated successfully", "success");
-        fetchExams();
-      } catch (err) {
-        Swal.fire("Error", err.message, "error");
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to save exam");
       }
+
+      Swal.fire("Success", `Exam ${editingExam ? "updated" : "added"} successfully`, "success");
+      handleClose();
+      fetchExams();
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -400,6 +232,16 @@ export default function Exams() {
     }
   };
 
+  const handleYearChange = (event, newValue) => {
+    setSelectedYear(newValue);
+  };
+
+  const filteredExams = selectedDepartment
+    ? examsData[selectedDepartment]?.filter(
+        (exam) => exam.academicLevel === academicLevels[selectedYear]
+      ) || []
+    : [];
+
   return (
     <Box p={4}>
       <Stack
@@ -416,7 +258,7 @@ export default function Exams() {
           Manage Exams
         </Typography>
         <Button
-          onClick={handleAddExam}
+          onClick={() => handleOpenForm()}
           variant="contained"
           startIcon={<FontAwesomeIcon icon={faPlus} />}
           disabled={loading}
@@ -442,10 +284,76 @@ export default function Exams() {
         </Box>
       )}
 
-      <Stack spacing={4}>
-        {departments.map((dept) => (
+      {!selectedDepartment ? (
+        <Box>
+          <Typography variant="h6" gutterBottom mb={3}>
+            Select Department
+          </Typography>
+          <Grid container spacing={3}>
+            {departments.map((dept) => (
+              <Grid item xs={12} sm={6} md={4} key={dept}>
+                <Card
+                  elevation={2}
+                  sx={{
+                    borderRadius: 2,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: 4,
+                    },
+                    border: selectedDepartment === dept ? "2px solid" : "none",
+                    borderColor: "primary.main",
+                  }}
+                  onClick={() => setSelectedDepartment(dept)}
+                >
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {dept}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {examsData[dept]?.length || 0} exams scheduled
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      ) : (
+        <>
+          <Box sx={{ mb: 3 }}>
+            <Button
+              onClick={() => setSelectedDepartment("")}
+              startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
+              sx={{ mb: 2 }}
+            >
+              Back to Departments
+            </Button>
+            <Typography variant="h5" gutterBottom>
+              {selectedDepartment}
+            </Typography>
+          </Box>
+
+          <Card elevation={2} sx={{ mb: 3, borderRadius: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Select Academic Year
+              </Typography>
+              <Tabs
+                value={selectedYear}
+                onChange={handleYearChange}
+                variant="fullWidth"
+                sx={{ borderBottom: 1, borderColor: 'divider' }}
+              >
+                {academicLevels.map((level, index) => (
+                  <Tab key={level} label={level} value={index} />
+                ))}
+              </Tabs>
+            </CardContent>
+          </Card>
+
           <Card
-            key={dept}
             elevation={2}
             sx={{
               borderRadius: 2,
@@ -457,33 +365,27 @@ export default function Exams() {
           >
             <CardContent>
               <Typography variant="h5" fontWeight="bold" mb={2} color="primary">
-                {dept}
+                {selectedDepartment} - {academicLevels[selectedYear]} Year
               </Typography>
               <Divider sx={{ mb: 3 }} />
 
-              {examsData[dept]?.length > 0 ? (
+              {filteredExams.length > 0 ? (
                 <TableContainer component={Paper} elevation={0}>
                   <Table>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "primary.light" }}>
                         <TableCell sx={{ fontWeight: "bold" }}>ID</TableCell>
-                        <TableCell sx={{ fontWeight: "bold" }}>
-                          Course Code
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: "bold" }}>
-                          Course
-                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Course Code</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Course</TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>Date</TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>Time</TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>Rooms</TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>Type</TableCell>
-                        <TableCell sx={{ fontWeight: "bold" }}>
-                          Actions
-                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {examsData[dept].map((exam) => (
+                      {filteredExams.map((exam) => (
                         <TableRow
                           key={exam.examId}
                           sx={{
@@ -521,7 +423,7 @@ export default function Exams() {
                               <Tooltip title="Edit Exam">
                                 <IconButton
                                   size="small"
-                                  onClick={() => handleEditExam(exam)}
+                                  onClick={() => handleOpenForm(exam)}
                                   color="primary"
                                   disabled={loading}
                                 >
@@ -550,13 +452,171 @@ export default function Exams() {
                   color="text.secondary"
                   sx={{ py: 2, textAlign: "center" }}
                 >
-                  No exams scheduled for this department.
+                  No exams scheduled for {academicLevels[selectedYear]} year in {selectedDepartment}.
                 </Typography>
               )}
             </CardContent>
           </Card>
-        ))}
-      </Stack>
+        </>
+      )}
+
+      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingExam ? "Edit Exam" : "Add New Exam"}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Exam ID"
+                fullWidth
+                name="examId"
+                value={formData.examId}
+                onChange={handleChange}
+                disabled={!!editingExam}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                label="Course"
+                fullWidth
+                name="courseCode"
+                value={formData.courseCode}
+                onChange={handleChange}
+                disabled={!!editingExam}
+              >
+                <MenuItem value="">
+                  <em>Select a course</em>
+                </MenuItem>
+                {courses.map((course) => (
+                  <MenuItem key={course.code} value={course.code}>
+                    {course.code} - {course.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Course Name"
+                fullWidth
+                name="courseName"
+                value={formData.courseName}
+                onChange={handleChange}
+                disabled
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Department"
+                fullWidth
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                disabled
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Exam Date"
+                type="date"
+                fullWidth
+                name="examDate"
+                value={formData.examDate}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: today }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Start Time"
+                fullWidth
+                name="startTime"
+                value={formData.startTime}
+                onChange={handleChange}
+                placeholder="e.g. 09:00 AM"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="End Time"
+                fullWidth
+                name="endTime"
+                value={formData.endTime}
+                onChange={handleChange}
+                placeholder="e.g. 11:00 AM"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Rooms (comma-separated)"
+                fullWidth
+                name="roomNumbers"
+                value={formData.roomNumbers.join(", ")}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    roomNumbers: e.target.value.split(",").map((r) => r.trim()),
+                  }))
+                }
+                placeholder="e.g. Room 101, Room 102"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Semester"
+                fullWidth
+                name="semester"
+                value={formData.semester}
+                onChange={handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                label="Exam Type"
+                fullWidth
+                name="examType"
+                value={formData.examType}
+                onChange={handleChange}
+              >
+                {examTypes.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                label="Academic Level"
+                fullWidth
+                name="academicLevel"
+                value={formData.academicLevel}
+                onChange={handleChange}
+              >
+                {academicLevels.map((level) => (
+                  <MenuItem key={level} value={level}>
+                    {level}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={loading}
+          >
+            {editingExam ? "Update" : "Add"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

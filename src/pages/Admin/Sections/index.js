@@ -16,12 +16,32 @@ import {
   DialogContent,
   DialogTitle,
   TextField,
+  Stack,
+  Card,
+  CardContent,
+  Grid,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Chip,
+  Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import Swal from "sweetalert2";
 import { useAuth } from "../../../context/AuthContext";
 import { BASE_URL } from "../../../utils/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrashCan, faUserPen } from "@fortawesome/free-solid-svg-icons";
+import {
+  faTrashCan,
+  faUserPen,
+  faPlus,
+  faClipboardList,
+  faChevronDown,
+} from "@fortawesome/free-solid-svg-icons";
 
 const initialFormState = {
   sectionId: "",
@@ -36,37 +56,15 @@ function Sections() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState(null);
   const [formData, setFormData] = useState(initialFormState);
   const [searchTerm, setSearchTerm] = useState("");
   const [isEditingSection, setIsEditingSection] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState(null);
-
-  const [sectionDialogOpen, setSectionDialogOpen] = useState(false);
-  const [sectionFormData, setSectionFormData] = useState({
-    sectionId: "",
-    taId: "",
-    capacity: "",
-    sessions: [
-      { day: "", startTime: "", endTime: "", room: "", type: "Section" },
-    ],
-  });
-  const [selectedCourseCode, setSelectedCourseCode] = useState(null);
-  const filteredCourses = courses.filter((course) => {
-    const search = searchTerm.toLowerCase();
-    const courseMatches =
-      course.name?.toLowerCase().includes(search) ||
-      course.code?.toLowerCase().includes(search);
-
-    const sectionMatches = course.sections?.some((section) =>
-      section.taId?.toLowerCase().includes(search)
-    );
-
-    return courseMatches || sectionMatches;
-  });
+  const [selectedCourseCode, setSelectedCourseCode] = useState("");
+  const [expandedCourse, setExpandedCourse] = useState(null);
 
   const { authToken } = useAuth();
-  console.log("Auth Token:", authToken);
+
   const fetchCourses = async () => {
     setLoading(true);
     try {
@@ -89,122 +87,41 @@ function Sections() {
     fetchCourses();
   }, []);
 
-  const handleDelete = async (id) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "This course will be permanently deleted.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, delete it!",
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await fetch(`${BASE_URL}/api/admin/delete-course/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
-        await fetchCourses();
-        Swal.fire("Deleted!", "Course has been deleted.", "success");
-      } catch (err) {
-        console.error("Delete failed:", err);
-      }
+  const handleOpenForm = (course = null, section = null) => {
+    if (course) {
+      setSelectedCourseCode(course.code);
     }
-  };
-
-  const handleOpenForm = (course = null) => {
-    setEditingCourse(course);
-    setFormData(course ? { ...course } : { ...initialFormState });
+    if (section) {
+      setIsEditingSection(true);
+      setSelectedSectionId(section.sectionId);
+      setFormData({
+        sectionId: section.sectionId,
+        taId: section.taId,
+        capacity: section.capacity,
+        sessions: section.sessions || [
+          { day: "", startTime: "", endTime: "", room: "", type: "Section" },
+        ],
+      });
+    } else {
+      setIsEditingSection(false);
+      setSelectedSectionId(null);
+      setFormData(initialFormState);
+    }
     setOpen(true);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
-  };
-
-  const resetForm = () => {
-    setFormData({ ...initialFormState });
-  };
-
-  const handleAddCourse = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch(`${BASE_URL}/api/admin/add-course`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        Swal.fire("Success!", "Course added successfully.", "success");
-        resetForm();
-        setOpen(false);
-        await fetchCourses();
-      } else {
-        const data = await response.json();
-        Swal.fire("Error!", `Failed to add course: ${data.message}`, "error");
-        resetForm();
-        setOpen(false);
-      }
-    } catch (error) {
-      Swal.fire(
-        "Error!",
-        "An unexpected error occurred. Please try again.",
-        "error"
-      );
-      resetForm();
-      setOpen(false);
-    }
-  };
-
-  const handleUpdateCourse = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch(
-        `${BASE_URL}/api/admin/update-course/${editingCourse?.code}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify(formData),
-        }
-      );
-
-      if (response.ok) {
-        Swal.fire("Success!", "Course updated successfully.", "success");
-        resetForm();
-        setOpen(false);
-        await fetchCourses();
-      } else {
-        const data = await response.json();
-        Swal.fire(
-          "Error!",
-          `Failed to update course: ${data.message}`,
-          "error"
-        );
-      }
-    } catch (error) {
-      Swal.fire(
-        "Error!",
-        "An unexpected error occurred. Please try again.",
-        "error"
-      );
-    }
+  const handleClose = () => {
+    setOpen(false);
+    setFormData(initialFormState);
+    setIsEditingSection(false);
+    setSelectedSectionId(null);
   };
 
   const handleAddSection = async () => {
-    if (!selectedCourseCode) return;
+    if (!selectedCourseCode) {
+      Swal.fire("Error", "Please select a course", "error");
+      return;
+    }
 
     const endpoint = isEditingSection
       ? `${BASE_URL}/api/admin/update-section/${selectedCourseCode}/${selectedSectionId}`
@@ -219,7 +136,7 @@ function Sections() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify(sectionFormData),
+        body: JSON.stringify(formData),
       });
 
       if (res.ok) {
@@ -230,17 +147,7 @@ function Sections() {
             : "Section added successfully",
           "success"
         );
-        setSectionDialogOpen(false);
-        setIsEditingSection(false);
-        setSelectedSectionId(null);
-        setSectionFormData({
-          sectionId: "",
-          taId: "",
-          capacity: "",
-          sessions: [
-            { day: "", startTime: "", endTime: "", room: "", type: "Section" },
-          ],
-        });
+        handleClose();
         await fetchCourses();
       } else {
         const data = await res.json();
@@ -290,361 +197,344 @@ function Sections() {
     }
   };
 
+  const filteredCourses = courses.filter((course) => {
+    const search = searchTerm.toLowerCase();
+    return (
+      course.name?.toLowerCase().includes(search) ||
+      course.code?.toLowerCase().includes(search) ||
+      course.sections?.some((section) =>
+        section.sectionId?.toLowerCase().includes(search)
+      )
+    );
+  });
+
   return (
     <Box p={4}>
-      <Typography variant="h4" gutterBottom>
-        Sections Management
-      </Typography>
-
-      <Button
-        variant="contained"
-        onClick={() => handleOpenForm()}
-        sx={{ mb: 2 }}
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={4}
       >
-        Add Section
-      </Button>
+        <Typography
+          variant="h5"
+          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+        >
+          <FontAwesomeIcon icon={faClipboardList} />
+          Manage Sections
+        </Typography>
+        <Button
+          onClick={() => handleOpenForm()}
+          variant="contained"
+          startIcon={<FontAwesomeIcon icon={faPlus} />}
+          disabled={loading}
+          sx={{
+            px: 3,
+            py: 1,
+            borderRadius: 2,
+            boxShadow: 2,
+            "&:hover": {
+              transform: "translateY(-2px)",
+              boxShadow: 4,
+            },
+            transition: "all 0.2s",
+          }}
+        >
+          Add New Section
+        </Button>
+      </Stack>
+
+      {loading && (
+        <Box display="flex" justifyContent="center" my={4}>
+          <CircularProgress />
+        </Box>
+      )}
+
       <TextField
-        label="Search by Name or ID"
+        label="Search by Course or Section"
         variant="outlined"
         size="small"
         fullWidth
         margin="normal"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
+        sx={{ mb: 3 }}
       />
 
-      <TableContainer sx={{ overflowX: "scroll" }} component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>#</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Code</TableCell>
-              <TableCell>Credit Hours</TableCell>
-              <TableCell>Department</TableCell>
-              <TableCell>Semester</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredCourses.map((course, index) => (
-              <React.Fragment key={course._id}>
-                <TableRow>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>{course.name}</TableCell>
-                  <TableCell>{course.code}</TableCell>
-                  <TableCell>{course.creditHours}</TableCell>
-                  <TableCell>{course.department}</TableCell>
-                  <TableCell>{course.semester}</TableCell>
-                  <TableCell align="right"></TableCell>
-                </TableRow>
-
-                {/* Section Rows */}
-                {course.sections?.map((section) => (
-                  <TableRow
-                    key={section.sectionId}
-                    sx={{ backgroundColor: "#f5f5f5" }}
+      {filteredCourses.map((course) => (
+        <Accordion
+          key={course._id}
+          expanded={expandedCourse === course._id}
+          onChange={() =>
+            setExpandedCourse(
+              expandedCourse === course._id ? null : course._id
+            )
+          }
+          sx={{
+            mb: 2,
+            borderRadius: "8px !important",
+            "&:before": { display: "none" },
+            boxShadow: 2,
+          }}
+        >
+          <AccordionSummary
+            expandIcon={<FontAwesomeIcon icon={faChevronDown} />}
+            sx={{
+              backgroundColor: "primary.light",
+              borderRadius: "8px 8px 0 0",
+            }}
+          >
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              width="100%"
+            >
+              <Typography variant="h6">
+                {course.name} ({course.code})
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {course.sections?.length || 0} Sections
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Grid container spacing={2}>
+              {course.sections?.map((section) => (
+                <Grid item xs={12} md={6} key={section.sectionId}>
+                  <Card
+                    elevation={2}
+                    sx={{
+                      borderRadius: 2,
+                      "&:hover": {
+                        boxShadow: 4,
+                      },
+                      transition: "all 0.2s",
+                    }}
                   >
-                    <TableCell colSpan={7}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          p: 2,
-                          borderRadius: 2,
-                          border: "1px solid #ddd",
-                          backgroundColor: "#fff",
-                          position: "relative",
-                        }}
+                    <CardContent>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="flex-start"
+                        mb={2}
                       >
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                          }}
-                        >
-                          <Typography variant="subtitle1" fontWeight="bold">
-                            Section: {section.sectionId}
-                          </Typography>
-                          <Box>
+                        <Typography variant="h6">
+                          Section {section.sectionId}
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          <Tooltip title="Edit Section">
                             <IconButton
-                              sx={{ alignSelf: "flex-start" }}
-                              onClick={() => {
-                                setSelectedCourseCode(course.code);
-                                setSelectedSectionId(section.sectionId);
-                                setIsEditingSection(true);
-                                setSectionFormData({
-                                  sectionId: section.sectionId,
-                                  taId: section.taId,
-                                  capacity: section.capacity,
-                                  sessions: section.sessions?.[0] || {
-                                    startTime: "",
-                                    endTime: "",
-                                    room: "",
-                                    type: "Section",
-                                  },
-                                });
-                                setSectionDialogOpen(true);
-                              }}
+                              size="small"
+                              onClick={() => handleOpenForm(course, section)}
+                              color="primary"
                             >
                               <FontAwesomeIcon icon={faUserPen} />
                             </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete Section">
                             <IconButton
-                              sx={{ alignSelf: "flex-start", ml: 1 }}
+                              size="small"
                               onClick={() =>
-                                handleDeleteSection(
-                                  course.code,
-                                  section.sectionId
-                                )
+                                handleDeleteSection(course.code, section.sectionId)
                               }
+                              color="error"
                             >
                               <FontAwesomeIcon icon={faTrashCan} />
                             </IconButton>
-                          </Box>
-                        </Box>
+                          </Tooltip>
+                        </Stack>
+                      </Stack>
 
-                        <Typography variant="body2" sx={{ mt: 1 }}>
-                          <strong>TA:</strong> {section.taId} |{" "}
-                          <strong>Capacity:</strong> {section.capacity} |{" "}
-                          <strong>Full:</strong> {section.isFull ? "Yes" : "No"}
+                      <Stack spacing={1}>
+                        <Typography variant="body2">
+                          <strong>TA:</strong> {section.taId}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Capacity:</strong> {section.capacity}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Status:</strong>{" "}
+                          <Chip
+                            label={section.isFull ? "Full" : "Available"}
+                            color={section.isFull ? "error" : "success"}
+                            size="small"
+                          />
                         </Typography>
 
-                        {section.sessions?.map((session) => (
+                        {section.sessions?.map((session, index) => (
                           <Box
-                            key={session._id}
+                            key={index}
                             sx={{
                               mt: 1,
                               p: 1,
-                              backgroundColor: "#f0f0f0",
+                              backgroundColor: "grey.100",
                               borderRadius: 1,
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: 2,
-                              fontSize: "0.9rem",
                             }}
                           >
-                            <div>
-                              <strong>Day:</strong> {session?.day}
-                            </div>
-                            <div>
+                            <Typography variant="body2">
+                              <strong>Day:</strong> {session.day}
+                            </Typography>
+                            <Typography variant="body2">
                               <strong>Time:</strong> {session.startTime} -{" "}
-                              {session?.endTime}
-                            </div>
-                            <div>
-                              <strong>Room:</strong> {session?.room}
-                            </div>
-                            <div>
-                              <strong>Type:</strong> {session?.type}
-                            </div>
+                              {session.endTime}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Room:</strong> {session.room}
+                            </Typography>
                           </Box>
                         ))}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>
-          {isEditingSection
-            ? "Add Section"
-            : `Edit Section to ${selectedCourseCode}`}
-        </DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Course Name"
-            fullWidth
-            margin="dense"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Code"
-            fullWidth
-            margin="dense"
-            name="code"
-            value={formData.code}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Credit Hours"
-            fullWidth
-            margin="dense"
-            type="number"
-            name="creditHours"
-            value={formData.creditHours}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Department"
-            fullWidth
-            margin="dense"
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Doctor ID"
-            fullWidth
-            margin="dense"
-            name="doctorId"
-            value={formData.doctorId}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Capacity"
-            fullWidth
-            margin="dense"
-            type="number"
-            name="capacity"
-            value={formData.capacity}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Semester"
-            fullWidth
-            margin="dense"
-            name="semester"
-            value={formData.semester}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Start Date"
-            type="date"
-            fullWidth
-            margin="dense"
-            InputLabelProps={{ shrink: true }}
-            name="startDate"
-            value={formData.startDate?.split("T")[0] || ""}
-            onChange={handleChange}
-          />
-          <TextField
-            label="End Date"
-            type="date"
-            fullWidth
-            margin="dense"
-            InputLabelProps={{ shrink: true }}
-            name="endDate"
-            value={formData.endDate?.split("T")[0] || ""}
-            onChange={handleChange}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleAddSection}>
-            {isEditingSection ? "Update Section" : "Add Section"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
+      ))}
 
       <Dialog
-        open={sectionDialogOpen}
-        onClose={() => setSectionDialogOpen(false)}
+        open={open}
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
       >
-        <DialogTitle>Add Section to {selectedCourseCode}</DialogTitle>
+        <DialogTitle>
+          {isEditingSection ? "Edit Section" : "Add New Section"}
+        </DialogTitle>
         <DialogContent>
-          <TextField
-            label="Section ID"
-            fullWidth
-            margin="dense"
-            value={sectionFormData.sectionId}
-            onChange={(e) =>
-              setSectionFormData({
-                ...sectionFormData,
-                sectionId: e.target.value,
-              })
-            }
-          />
-          <TextField
-            label="TA ID"
-            fullWidth
-            margin="dense"
-            value={sectionFormData.taId}
-            onChange={(e) =>
-              setSectionFormData({ ...sectionFormData, taId: e.target.value })
-            }
-          />
-          <TextField
-            label="Capacity"
-            type="number"
-            fullWidth
-            margin="dense"
-            value={sectionFormData.capacity}
-            onChange={(e) =>
-              setSectionFormData({
-                ...sectionFormData,
-                capacity: e.target.value,
-              })
-            }
-          />
-          <TextField
-            label="Day"
-            fullWidth
-            margin="dense"
-            value={sectionFormData.sessions[0]?.day}
-            onChange={(e) =>
-              setSectionFormData((prev) => ({
-                ...prev,
-                sessions: [{ ...prev.sessions[0], day: e.target.value }],
-              }))
-            }
-          />
-          <TextField
-            label="Start Time"
-            fullWidth
-            margin="dense"
-            value={sectionFormData.sessions[0]?.startTime}
-            onChange={(e) =>
-              setSectionFormData((prev) => ({
-                ...prev,
-                sessions: [{ ...prev.sessions[0], startTime: e.target.value }],
-              }))
-            }
-          />
-          <TextField
-            label="End Time"
-            fullWidth
-            margin="dense"
-            value={sectionFormData.sessions[0]?.endTime}
-            onChange={(e) =>
-              setSectionFormData((prev) => ({
-                ...prev,
-                sessions: [{ ...prev.sessions[0], endTime: e.target.value }],
-              }))
-            }
-          />
-          <TextField
-            label="Room"
-            fullWidth
-            margin="dense"
-            value={sectionFormData.sessions[0]?.room}
-            onChange={(e) =>
-              setSectionFormData((prev) => ({
-                ...prev,
-                sessions: [{ ...prev.sessions[0], room: e.target.value }],
-              }))
-            }
-          />
-          <TextField
-            label="Type"
-            fullWidth
-            margin="dense"
-            value={sectionFormData.sessions[0]?.type}
-            onChange={(e) =>
-              setSectionFormData((prev) => ({
-                ...prev,
-                sessions: [{ ...prev.sessions[0], type: e.target.value }],
-              }))
-            }
-          />
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Select Course</InputLabel>
+                <Select
+                  value={selectedCourseCode}
+                  onChange={(e) => setSelectedCourseCode(e.target.value)}
+                  label="Select Course"
+                  disabled={isEditingSection}
+                >
+                  {courses.map((course) => (
+                    <MenuItem key={course._id} value={course.code}>
+                      {course.name} ({course.code})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Section ID"
+                fullWidth
+                value={formData.sectionId}
+                onChange={(e) =>
+                  setFormData({ ...formData, sectionId: e.target.value })
+                }
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="TA ID"
+                fullWidth
+                value={formData.taId}
+                onChange={(e) =>
+                  setFormData({ ...formData, taId: e.target.value })
+                }
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Capacity"
+                type="number"
+                fullWidth
+                value={formData.capacity}
+                onChange={(e) =>
+                  setFormData({ ...formData, capacity: e.target.value })
+                }
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Day"
+                fullWidth
+                value={formData.sessions[0]?.day}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    sessions: [
+                      { ...formData.sessions[0], day: e.target.value },
+                    ],
+                  })
+                }
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Start Time"
+                type="time"
+                fullWidth
+                value={formData.sessions[0]?.startTime}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    sessions: [
+                      { ...formData.sessions[0], startTime: e.target.value },
+                    ],
+                  })
+                }
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="End Time"
+                type="time"
+                fullWidth
+                value={formData.sessions[0]?.endTime}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    sessions: [
+                      { ...formData.sessions[0], endTime: e.target.value },
+                    ],
+                  })
+                }
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Room"
+                fullWidth
+                value={formData.sessions[0]?.room}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    sessions: [
+                      { ...formData.sessions[0], room: e.target.value },
+                    ],
+                  })
+                }
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSectionDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleAddSection}>Add Section</Button>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleClose} variant="outlined">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAddSection}
+            variant="contained"
+            disabled={!selectedCourseCode}
+          >
+            {isEditingSection ? "Update Section" : "Add Section"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

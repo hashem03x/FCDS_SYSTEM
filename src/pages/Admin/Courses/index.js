@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -17,12 +17,15 @@ import {
   DialogTitle,
   TextField,
   Skeleton,
+  MenuItem,
 } from "@mui/material";
 import Swal from "sweetalert2";
-import { useAuth } from "../../../context/AuthContext"; // adjust path if needed
-import { BASE_URL } from "../../../utils/api"; // make sure it's defined properly
+import { useAuth } from "../../../context/AuthContext";
+import { useAdmin } from "../../../context/AdminContext";
+import { BASE_URL } from "../../../utils/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrashCan, faUserPen } from "@fortawesome/free-solid-svg-icons";
+
 const initialFormState = {
   name: "",
   code: "",
@@ -36,36 +39,13 @@ const initialFormState = {
 };
 
 function Courses() {
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [formData, setFormData] = useState(initialFormState);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { authToken } = useAuth();
-
-  const fetchCourses = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${BASE_URL}/api/admin/courses`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-      const data = await res.json();
-      setCourses(data);
-    } catch (err) {
-      console.error("Failed to fetch courses:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCourses();
-  }, []);
+  const { courses, doctors, loading, refreshCourses } = useAdmin();
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -84,18 +64,18 @@ function Courses() {
             Authorization: `Bearer ${authToken}`,
           },
         });
-        await fetchCourses();
+        await refreshCourses();
         Swal.fire("Deleted!", "Course has been deleted.", "success");
       } catch (err) {
         console.error("Delete failed:", err);
+        Swal.fire("Error!", "Failed to delete course.", "error");
       }
     }
   };
 
   const handleOpenForm = (course = null) => {
-    console.log(course);
     setEditingCourse(course);
-    setFormData(course ? { ...course } : { ...initialFormState });
+    setFormData(course || { ...initialFormState });
     setOpen(true);
   };
 
@@ -106,6 +86,7 @@ function Courses() {
       [name]: value,
     }));
   };
+
   const resetForm = () => {
     setFormData({ ...initialFormState });
   };
@@ -113,57 +94,49 @@ function Courses() {
   const handleAddCourse = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(
-        `${BASE_URL}/api/admin/add-course`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`, 
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const response = await fetch(`${BASE_URL}/api/admin/add-course`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(formData),
+      });
 
       if (response.ok) {
         Swal.fire({
           title: "Success!",
           text: "Course added successfully.",
           icon: "success",
-          position: "center", 
+          position: "center",
         });
-        resetForm(); // Reset form after success
-        setOpen(false); // Close the dialog
-        await fetchCourses(); // Refresh the course list
+        resetForm();
+        setOpen(false);
+        await refreshCourses();
       } else {
         const data = await response.json();
         Swal.fire({
           title: "Error!",
           text: `Failed to add course: ${data.message}`,
           icon: "error",
-          position: "top-center", 
+          position: "top-center",
         });
-        resetForm(); // Reset form after success
-        setOpen(false); // Close the dialog
       }
     } catch (error) {
       Swal.fire({
         title: "Error!",
         text: "An unexpected error occurred. Please try again.",
         icon: "error",
-        position: "top-center", // Ensure SweetAlert appears at the top of the screen
+        position: "top-center",
       });
-      resetForm(); // Reset form after success
-      setOpen(false); // Close the dialog
     }
   };
 
   const handleUpdateCourse = async (e) => {
     e.preventDefault();
-    console.log("Updating course with ID:", editingCourse);
     try {
       const response = await fetch(
-        `${BASE_URL}/api/admin/update-course/${editingCourse?.code}`,
+        `${BASE_URL}/api/admin/update-course/${editingCourse._id}`,
         {
           method: "PUT",
           headers: {
@@ -183,7 +156,7 @@ function Courses() {
         });
         resetForm();
         setOpen(false);
-        await fetchCourses();
+        await refreshCourses();
       } else {
         const data = await response.json();
         Swal.fire({
@@ -203,6 +176,11 @@ function Courses() {
     }
   };
 
+  const filteredCourses = courses.filter((course) =>
+    course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    course.code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <Box p={4}>
       <Typography variant="h4" gutterBottom>
@@ -217,7 +195,7 @@ function Courses() {
         Add Course
       </Button>
       <TextField
-        label="Search by Name or ID"
+        label="Search by Name or Code"
         variant="outlined"
         size="small"
         fullWidth
@@ -235,42 +213,60 @@ function Courses() {
               <TableCell>Code</TableCell>
               <TableCell>Credit Hours</TableCell>
               <TableCell>Department</TableCell>
+              <TableCell>Doctor</TableCell>
               <TableCell>Semester</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {courses.map((course, index) => (
-              <TableRow key={course._id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{course.name}</TableCell>
-                <TableCell>{course.code}</TableCell>
-                <TableCell>{course.creditHours}</TableCell>
-                <TableCell>{course.department}</TableCell>
-                <TableCell>{course.semester}</TableCell>
-                <TableCell align="right">
-                  <IconButton onClick={() => handleOpenForm(course)}>
-                    <FontAwesomeIcon icon={faUserPen} />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => handleDelete(course._id)}
-                  >
-                    <FontAwesomeIcon icon={faTrashCan} />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
+            {loading ? (
+              Array.from(new Array(5)).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton /></TableCell>
+                  <TableCell><Skeleton width="60%" /></TableCell>
+                  <TableCell><Skeleton width="40%" /></TableCell>
+                  <TableCell><Skeleton width="30%" /></TableCell>
+                  <TableCell><Skeleton width="50%" /></TableCell>
+                  <TableCell><Skeleton width="40%" /></TableCell>
+                  <TableCell><Skeleton width="30%" /></TableCell>
+                  <TableCell align="right"><Skeleton width="80px" /></TableCell>
+                </TableRow>
+              ))
+            ) : (
+              filteredCourses.map((course, index) => (
+                <TableRow key={course._id}>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{course.name}</TableCell>
+                  <TableCell>{course.code}</TableCell>
+                  <TableCell>{course.creditHours}</TableCell>
+                  <TableCell>{course.department}</TableCell>
+                  <TableCell>
+                    {doctors.find(d => d.id === course.doctorId)?.name || "-"}
+                  </TableCell>
+                  <TableCell>{course.semester}</TableCell>
+                  <TableCell align="right">
+                    <IconButton onClick={() => handleOpenForm(course)}>
+                      <FontAwesomeIcon icon={faUserPen} />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      onClick={() => handleDelete(course._id)}
+                    >
+                      <FontAwesomeIcon icon={faTrashCan} />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={open} onClose={() => setOpen(false)}>
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editingCourse ? "Edit Course" : "Add Course"}</DialogTitle>
         <DialogContent>
           <TextField
-            label="Course Name"
+            label="Name"
             fullWidth
             margin="dense"
             name="name"
@@ -287,9 +283,9 @@ function Courses() {
           />
           <TextField
             label="Credit Hours"
+            type="number"
             fullWidth
             margin="dense"
-            type="number"
             name="creditHours"
             value={formData.creditHours}
             onChange={handleChange}
@@ -303,18 +299,28 @@ function Courses() {
             onChange={handleChange}
           />
           <TextField
-            label="Doctor ID"
+            select
+            label="Doctor"
             fullWidth
             margin="dense"
             name="doctorId"
             value={formData.doctorId}
             onChange={handleChange}
-          />
+          >
+            <MenuItem value="">
+              <em>None</em>
+            </MenuItem>
+            {doctors.map((doctor) => (
+              <MenuItem key={doctor.id} value={doctor.id}>
+                {doctor.name}
+              </MenuItem>
+            ))}
+          </TextField>
           <TextField
             label="Capacity"
+            type="number"
             fullWidth
             margin="dense"
-            type="number"
             name="capacity"
             value={formData.capacity}
             onChange={handleChange}
@@ -332,23 +338,22 @@ function Courses() {
             type="date"
             fullWidth
             margin="dense"
-            InputLabelProps={{ shrink: true }}
             name="startDate"
-            value={formData.startDate.split("T")[0] || ""}
+            value={formData.startDate}
             onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
           />
           <TextField
             label="End Date"
             type="date"
             fullWidth
             margin="dense"
-            InputLabelProps={{ shrink: true }}
             name="endDate"
-            value={formData.endDate.split("T")[0] || ""}
+            value={formData.endDate}
             onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
           />
         </DialogContent>
-
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
           <Button onClick={editingCourse ? handleUpdateCourse : handleAddCourse}>

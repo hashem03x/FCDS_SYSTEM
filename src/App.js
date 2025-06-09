@@ -1,19 +1,17 @@
+import React, { useMemo } from "react";
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import PageNotFound from "./pages/PageNotFound/PageNotFound";
-import AdminDashboard from "./pages/Admin/Dashboard";
-import StudentDashboard from "./pages/Student/Dashboard";
-import StudentPerformance from "./pages/Student/StudentPerformance";
+import { AuthProvider } from "./context/AuthContext";
+import { AdminProvider } from "./context/AdminContext";
 import PrivateRoutes from "./routes/PrivateRoutes";
 import PublicRoutes from "./routes/PublicRoutes";
-import StudentLayout from "./pages/Student/StudentLayout";
-import Registration from "./pages/Student/Registration";
-import TimeTable from "./pages/Student/TimeTable";
-import ExamsTable from "./pages/Student/Exams";
-import Settings from "./pages/Student/Settings";
-import Attendance from "./pages/Student/Attendance";
-import { AuthProvider } from "./context/AuthContext";
+
+// Public Pages
+import Login from "./pages/Login";
+import PageNotFound from "./pages/PageNotFound/PageNotFound";
+
+// Admin Pages
 import AdminLayout from "./pages/Admin/AdminLayout";
+import AdminDashboard from "./pages/Admin/Dashboard";
 import Users from "./pages/Admin/Users";
 import Courses from "./pages/Admin/Courses";
 import Sections from "./pages/Admin/Sections";
@@ -22,61 +20,86 @@ import Fees from "./pages/Admin/Fees";
 import Exams from "./pages/Admin/Exams";
 import Grades from "./pages/Admin/Grades";
 
-function App() {
+// Student Pages
+import StudentLayout from "./pages/Student/StudentLayout";
+import StudentDashboard from "./pages/Student/Dashboard";
+import StudentPerformance from "./pages/Student/StudentPerformance";
+import Registration from "./pages/Student/Registration";
+import TimeTable from "./pages/Student/TimeTable";
+import ExamsTable from "./pages/Student/Exams";
+import Settings from "./pages/Student/Settings";
+import Attendance from "./pages/Student/Attendance";
+
+// Memoized route components
+const MemoizedLogin = React.memo(Login);
+const MemoizedPageNotFound = React.memo(PageNotFound);
+const MemoizedAdminLayout = React.memo(AdminLayout);
+const MemoizedStudentLayout = React.memo(StudentLayout);
+
+const App = React.memo(() => {
+  // Memoize route configurations
+  const publicRoutes = useMemo(() => (
+    <Route element={<PublicRoutes />}>
+      <Route index path="/" element={<MemoizedLogin />} />
+      <Route path="/login" element={<MemoizedLogin />} />
+    </Route>
+  ), []);
+
+  const adminRoutes = useMemo(() => (
+    <Route
+      path="/admin/*"
+      element={
+        <PrivateRoutes role="admin">
+          <AdminProvider>
+            <MemoizedAdminLayout />
+          </AdminProvider>
+        </PrivateRoutes>
+      }
+    >
+      <Route index element={<AdminDashboard />} />
+      <Route path="users" element={<Users />} />
+      <Route path="courses" element={<Courses />} />
+      <Route path="sections" element={<Sections />} />
+      <Route path="complaints" element={<Complaints />} />
+      <Route path="fees" element={<Fees />} />
+      <Route path="exams" element={<Exams />} />
+      <Route path="grades" element={<Grades />} />
+    </Route>
+  ), []);
+
+  const studentRoutes = useMemo(() => (
+    <Route
+      path="/student/*"
+      element={
+        <PrivateRoutes role="student">
+          <MemoizedStudentLayout />
+        </PrivateRoutes>
+      }
+    >
+      <Route index element={<StudentDashboard />} />
+      <Route path="performance" element={<StudentPerformance />} />
+      <Route path="registration" element={<Registration />} />
+      <Route path="lectures-table" element={<TimeTable />} />
+      <Route path="exams-table" element={<ExamsTable />} />
+      <Route path="settings" element={<Settings />} />
+      <Route path="attendance" element={<Attendance />} />
+    </Route>
+  ), []);
+
   return (
     <Router>
       <AuthProvider>
         <Routes>
-          {/* Public Route (Prevents logged-in users from accessing login page) */}
-          <Route element={<PublicRoutes />}>
-            <Route index path="/" element={<Login />} />
-            <Route index path="/login" element={<Login />} />
-          </Route>
-
-          {/* Admin Routes */}
-          <Route
-            path="/admin/*"
-            element={
-              <PrivateRoutes role="admin">
-                <AdminLayout />
-              </PrivateRoutes>
-            }
-          >
-            <Route index path="" element={<AdminDashboard />} />
-            <Route path="users" element={<Users />} />
-            <Route path="courses" element={<Courses />} />
-            <Route path="sections" element={<Sections />} />
-            <Route path="complaints" element={<Complaints />} />
-            <Route path="fees" element={<Fees />} />
-            <Route path="exams" element={<Exams />} />
-            <Route path="grades" element={<Grades />} />
-          </Route>
-
-          {/* Student Routes */}
-          <Route
-            path="/student/*"
-            element={
-              <PrivateRoutes role="student">
-                <StudentLayout />
-              </PrivateRoutes>
-            }
-          >
-            {/* Student Pages */}
-            <Route index path="" element={<StudentDashboard />} />
-            <Route path="performance" element={<StudentPerformance />} />
-            <Route path="registration" element={<Registration />} />
-            <Route path="lectures-table" element={<TimeTable />} />
-            <Route path="exams-table" element={<ExamsTable />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="attendance" element={<Attendance />} />
-          </Route>
-
-          {/* Catch-All Page */}
-          <Route path="*" element={<PageNotFound />} />
+          {publicRoutes}
+          {adminRoutes}
+          {studentRoutes}
+          <Route path="*" element={<MemoizedPageNotFound />} />
         </Routes>
       </AuthProvider>
     </Router>
   );
-}
+});
+
+App.displayName = "App";
 
 export default App;

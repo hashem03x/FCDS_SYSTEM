@@ -1,74 +1,119 @@
-import { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { BASE_URL } from "../utils/api";
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [userPhoto, setUserPhoto] = useState("");
-  const [authToken, setAuthToken] = useState(null);
-  const [userRole , setUserRole] = useState("")
-  const [isLoading, setIsLoading] = useState(false);
+// API request helper
+const makeAuthRequest = async (endpoint, method = "POST", body = null) => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/auth/${endpoint}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : null,
+    });
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || "Authentication failed");
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Auth API Error:", error);
+    throw error;
+  }
+};
+
+export const AuthProvider = React.memo(({ children }) => {
+  const [authState, setAuthState] = useState({
+    user: null,
+    userPhoto: "",
+    authToken: null,
+    userRole: "",
+    isLoading: false,
+  });
+  
   const navigate = useNavigate();
 
-  const login = async (ID, password) => {
-    setIsLoading(true);
+  // Memoized login function
+  const login = useCallback(async (ID, password) => {
+    setAuthState(prev => ({ ...prev, isLoading: true }));
+    
     try {
-      const response = await fetch(`${BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id: ID, password }),
-      });
+      const data = await makeAuthRequest("login", "POST", { id: ID, password });
+      
+      // Update auth state
+      setAuthState(prev => ({
+        ...prev,
+        user: data.user,
+        authToken: data.token,
+        userRole: data.user.role,
+        isLoading: false,
+      }));
 
-      const data = await response.json();
+      // Set session storage
+      sessionStorage.setItem("IsLoggedIn", "true");
+      sessionStorage.setItem("userRole", data.user.role);
 
-      if (!response.ok) {
-        throw new Error(data.message || "Invalid credentials");
-      }
-
-      // Set state only (no sessionStorage)
-      setAuthToken(data.token);
-      setUser(data.user);
-      sessionStorage.setItem("IsLoggedIn", true);
-      if (data.user.role === "admin") navigate("/admin/");
-      if (data.user.role === "student") navigate("/student/");
-      setUserRole(data.user.role)
+      // Navigate based on role
+      const redirectPath = data.user.role === "admin" ? "/admin/" : "/student/";
+      navigate(redirectPath);
     } catch (error) {
+      setAuthState(prev => ({ ...prev, isLoading: false }));
       alert(error.message);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [navigate]);
 
-  const logout = () => {
-    setAuthToken(null);
-    setUser(null);
-    setUserPhoto("");
-    sessionStorage.setItem("IsLoggedIn", false);
-    setTimeout(() => {
-      navigate("/login");
-    }, 0);
-  };
+  // Memoized logout function
+  const logout = useCallback(() => {
+    setAuthState({
+      user: null,
+      userPhoto: "",
+      authToken: null,
+      userRole: "",
+      isLoading: false,
+    });
+    
+    sessionStorage.setItem("IsLoggedIn", "false");
+    sessionStorage.removeItem("userRole");
+    
+    navigate("/login");
+  }, [navigate]);
+
+  // Memoized setUserPhoto function
+  const setUserPhoto = useCallback((photo) => {
+    setAuthState(prev => ({ ...prev, userPhoto: photo }));
+  }, []);
+
+  // Memoized context value
+  const contextValue = useMemo(() => ({
+    user: authState.user,
+    authToken: authState.authToken,
+    isLoading: authState.isLoading,
+    userPhoto: authState.userPhoto,
+    userRole: authState.userRole,
+    login,
+    logout,
+    setUserPhoto,
+  }), [authState, login, logout, setUserPhoto]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        authToken,
-        isLoading,
-        login,
-        logout,
-        setUserPhoto,
-        userPhoto,
-        userRole
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
-};
+});
 
-export const useAuth = () => useContext(AuthContext);
+AuthProvider.displayName = "AuthProvider";
+
+// Memoized hook
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};

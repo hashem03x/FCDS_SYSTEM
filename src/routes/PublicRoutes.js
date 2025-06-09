@@ -1,18 +1,26 @@
+import React, { useMemo } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const PublicRoutes = () => {
+// Memoized public route protection
+const PublicRoutes = React.memo(() => {
   const { user } = useAuth();
 
-  if (user) {
-    return user.role === "admin" ? (
-      <Navigate to="/admin/" replace />
-    ) : (
-      <Navigate to="/student/" replace />
-    );
-  }
+  // Memoize the route protection logic
+  const publicRoute = useMemo(() => {
+    // If user is authenticated, redirect based on role
+    if (user) {
+      const redirectPath = user.role === "admin" ? "/admin/" : "/student/";
+      return <Navigate to={redirectPath} replace />;
+    }
 
-  return <Outlet />;
-};
+    // Return the public content
+    return <Outlet />;
+  }, [user]);
+
+  return publicRoute;
+});
+
+PublicRoutes.displayName = "PublicRoutes";
 
 export default PublicRoutes;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -17,13 +17,15 @@ import {
   DialogTitle,
   TextField,
   Skeleton,
+  ButtonGroup,
 } from "@mui/material";
 import Swal from "sweetalert2";
-import { useAuth } from "../../../context/AuthContext"; // adjust path if needed
-import { BASE_URL } from "../../../utils/api"; // make sure it's defined properly
+import { useAuth } from "../../../context/AuthContext";
+import { useAdmin } from "../../../context/AdminContext";
+import { BASE_URL } from "../../../utils/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrashCan, faUserPen } from "@fortawesome/free-solid-svg-icons";
-import zIndex from "@mui/material/styles/zIndex";
+
 const initialFormState = {
   name: "",
   email: "",
@@ -33,47 +35,26 @@ const initialFormState = {
   dateOfBirth: "",
   gender: "",
   address: "",
-  role: "student", // Default role
+  role: "student",
   status: "Active",
   department: "",
   yearOfStudy: 1,
   academicAdvisor: "",
 };
+
 function Users() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState(initialFormState);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRole, setSelectedRole] = useState("all");
 
   const { authToken } = useAuth();
+  const { users, loading, refreshUsers } = useAdmin();
 
-  const roles = ["student", "admin", "doctor", "teaching assistant"];
+  const roles = ["student", "admin", "doctor", "ta"];
 
   const isStudent = formData.role === "student";
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${BASE_URL}/api/admin/users`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-      const data = await res.json();
-      setUsers(data);
-      } catch (err) {
-      console.error("Failed to fetch users:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -92,10 +73,11 @@ function Users() {
             Authorization: `Bearer ${authToken}`,
           },
         });
-        await fetchUsers();
+        await refreshUsers();
         Swal.fire("Deleted!", "User has been deleted.", "success");
       } catch (err) {
         console.error("Delete failed:", err);
+        Swal.fire("Error!", "Failed to delete user.", "error");
       }
     }
   };
@@ -113,6 +95,7 @@ function Users() {
       [name]: value,
     }));
   };
+
   const resetForm = () => {
     setFormData({ ...initialFormState });
   };
@@ -123,61 +106,52 @@ function Users() {
         title: "Error!",
         text: "Password must be at least 8 characters long.",
         icon: "error",
-        position: "top-Right", // Ensure SweetAlert appears at the top of the screen
+        position: "top-Right",
       });
       return false;
-    } else {
-      return true;
     }
+    return true;
   };
 
   const handleAddUser = async (e) => {
     e.preventDefault();
-    // First validate form data
     if (!validateFormData()) return;
     try {
-      const response = await fetch(
-        "https://college-system-two.vercel.app/api/admin/add-user",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`, // Add your token here
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const response = await fetch(`${BASE_URL}/api/admin/add-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(formData),
+      });
 
       if (response.ok) {
         Swal.fire({
           title: "Success!",
           text: "User added successfully.",
           icon: "success",
-          position: "center", // Ensure SweetAlert appears at the top of the screen
+          position: "center",
         });
-        resetForm(); // Reset form after success
-        setOpen(false); // Close the dialog
-        await fetchUsers(); // Refresh the user list
+        resetForm();
+        setOpen(false);
+        await refreshUsers();
       } else {
         const data = await response.json();
         Swal.fire({
           title: "Error!",
           text: `Failed to add user: ${data.message}`,
           icon: "error",
-          position: "top-center", // Ensure SweetAlert appears at the top of the screen
+          position: "top-center",
         });
-        resetForm(); // Reset form after success
-        setOpen(false); // Close the dialog
       }
     } catch (error) {
       Swal.fire({
         title: "Error!",
         text: "An unexpected error occurred. Please try again.",
         icon: "error",
-        position: "top-center", // Ensure SweetAlert appears at the top of the screen
+        position: "top-center",
       });
-      resetForm(); // Reset form after success
-      setOpen(false); // Close the dialog
     }
   };
 
@@ -207,7 +181,7 @@ function Users() {
         });
         resetForm();
         setOpen(false);
-        await fetchUsers();
+        await refreshUsers();
       } else {
         const data = await response.json();
         Swal.fire({
@@ -227,6 +201,13 @@ function Users() {
     }
   };
 
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.id?.includes(searchTerm);
+    const matchesRole = selectedRole === "all" || user.role === selectedRole;
+    return matchesSearch && matchesRole;
+  });
+
   return (
     <Box p={4}>
       <Typography variant="h4" gutterBottom>
@@ -240,6 +221,42 @@ function Users() {
       >
         Add User
       </Button>
+
+      <Box sx={{ mb: 2 }}>
+        <ButtonGroup variant="contained" aria-label="role filter buttons">
+          <Button 
+            onClick={() => setSelectedRole("all")}
+            color={selectedRole === "all" ? "primary" : "inherit"}
+          >
+            All
+          </Button>
+          <Button 
+            onClick={() => setSelectedRole("doctor")}
+            color={selectedRole === "doctor" ? "primary" : "inherit"}
+          >
+            Doctors
+          </Button>
+          <Button 
+            onClick={() => setSelectedRole("ta")}
+            color={selectedRole === "ta" ? "primary" : "inherit"}
+          >
+            Teaching assistants
+          </Button>
+          <Button 
+            onClick={() => setSelectedRole("admin")}
+            color={selectedRole === "admin" ? "primary" : "inherit"}
+          >
+            Admins
+          </Button>
+          <Button 
+            onClick={() => setSelectedRole("student")}
+            color={selectedRole === "student" ? "primary" : "inherit"}
+          >
+            Students
+          </Button>
+        </ButtonGroup>
+      </Box>
+
       <TextField
         label="Search by Name or ID"
         variant="outlined"
@@ -263,55 +280,41 @@ function Users() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {loading
-              ? Array.from(new Array(5)).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton width="60%" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton width="80%" />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Skeleton width="40px" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              : users
-                  .filter(
-                    (user) =>
-                      user.name
-                        .toLowerCase()
-                        .includes(searchTerm.toLowerCase()) ||
-                      user.id?.includes(searchTerm)
-                  )
-                  .map((user, index) => ( 
-                    <TableRow key={index}>
-                      <TableCell>{user?.id}</TableCell>
-                      <TableCell>{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.role}</TableCell>
-                      <TableCell>
-                        {user.role === "student"
-                          ? user?.performance?.academicLevel
-                          : "-"}
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton onClick={() => handleOpenForm(user)}>
-                          <FontAwesomeIcon icon={faUserPen} />
-                        </IconButton>
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDelete(user.id)}
-                        >
-                          <FontAwesomeIcon icon={faTrashCan} />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+            {loading ? (
+              Array.from(new Array(5)).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton /></TableCell>
+                  <TableCell><Skeleton width="60%" /></TableCell>
+                  <TableCell><Skeleton width="80%" /></TableCell>
+                  <TableCell><Skeleton width="40%" /></TableCell>
+                  <TableCell><Skeleton width="30%" /></TableCell>
+                  <TableCell align="right"><Skeleton width="80px" /></TableCell>
+                </TableRow>
+              ))
+            ) : (
+              filteredUsers.map((user, index) => (
+                <TableRow key={index}>
+                  <TableCell>{user?.id}</TableCell>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.role}</TableCell>
+                  <TableCell>
+                    {user.role === "student" ? user?.performance?.academicLevel : "-"}
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton onClick={() => handleOpenForm(user)}>
+                      <FontAwesomeIcon icon={faUserPen} />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      onClick={() => handleDelete(user.id)}
+                    >
+                      <FontAwesomeIcon icon={faTrashCan} />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>

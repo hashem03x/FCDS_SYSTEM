@@ -21,6 +21,7 @@ const Attendance = () => {
   const [error, setError] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const { user } = useAuth();
+  const [isWebcamActive, setIsWebcamActive] = useState(false);
   console.log("user", user);
   const videoConstraints = {
     width: 480,
@@ -28,14 +29,13 @@ const Attendance = () => {
     facingMode: "user",
   };
 
-  useEffect(() => {
-    // Automatically start capturing 3s after mount
-    const timer = setTimeout(() => {
+  const startAttendance = () => {
+    setIsWebcamActive(true);
+    // Automatically start capturing 3s after webcam is activated
+    setTimeout(() => {
       captureImage();
     }, 3000);
-
-    return () => clearTimeout(timer);
-  }, []);
+  };
 
   const captureImage = async () => {
     if (!webcamRef?.current) return;
@@ -102,6 +102,12 @@ const Attendance = () => {
           text: "Please try again or contact college admin if you belive it's a mistake.",
         });
       }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Connection Error",
+        text: "Could not connect to the attendance server. Please try again.",
+      });
     } finally {
       setCapturing(false);
     }
@@ -109,68 +115,74 @@ const Attendance = () => {
 
   return (
     <Container maxWidth="sm" sx={{ mt: 5, textAlign: "center" }}>
-      <Typography variant="h4" gutterBottom>
-        Attendance System
-      </Typography>
       <Card elevation={4} sx={{ p: 2 }}>
         <CardContent>
-          <div
-            style={{
-              position: "relative",
-              width: 480,
-              height: 360,
-              margin: "auto",
-            }}
-          >
-            <Webcam
-              audio={false}
-              ref={webcamRef}
-              screenshotFormat="image/jpeg"
-              videoConstraints={videoConstraints}
-              style={{ width: "100%", height: "100%", borderRadius: 10 }}
-            />
-
-            {/* Face placement canvas overlay */}
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                borderRadius: 10,
-                backgroundColor: "rgba(0,0,0,0.4)",
-                boxSizing: "border-box",
-                pointerEvents: "none",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              {/* Transparent face window */}
-              <div
-                style={{
-                  width: 200,
-                  height: 260,
-                  border: "2px dashed #fff",
-                  borderRadius: "50%",
-                  backgroundColor: "rgba(0,0,0,0)",
-                }}
-              ></div>
-            </div>
-          </div>
-
-          {capturing ? (
-            <CircularProgress sx={{ mt: 2 }} />
-          ) : (
+          <Typography variant="h4" className="mb-5" gutterBottom>
+            Attendance System
+          </Typography>
+          {!isWebcamActive ? (
             <Button
               variant="contained"
               color="primary"
-              sx={{ mt: 2 }}
-              onClick={captureImage}
+              size="large"
+              onClick={startAttendance}
+              sx={{ mb: 2 }}
             >
-              Retry Capture
+              Take Attendance
             </Button>
+          ) : (
+            <>
+              <div style={{ position: "relative", width: 480, height: 360, margin: "auto" }}>
+                <Webcam
+                  audio={false}
+                  ref={webcamRef}
+                  screenshotFormat="image/jpeg"
+                  videoConstraints={videoConstraints}
+                  style={{ width: "100%", height: "100%", borderRadius: 10 }}
+                />
+                <div style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: 10,
+                  backgroundColor: "rgba(0,0,0,0.6)",
+                  boxSizing: "border-box",
+                  pointerEvents: "none",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  maskImage: "radial-gradient(circle at center, transparent 130px, black 130px)",
+                  WebkitMaskImage: "radial-gradient(circle at center, transparent 130px, black 130px)",
+                }}>
+                </div>
+                <div style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: 260,
+                  height: 260,
+                  border: "2px dashed #fff",
+                  borderRadius: "50%",
+                  pointerEvents: "none",
+                }}></div>
+              </div>
+
+              {capturing ? (
+                <CircularProgress sx={{ mt: 2 }} />
+              ) : (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  sx={{ mt: 2 }}
+                  onClick={captureImage}
+                >
+                  Retry Capture
+                </Button>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -224,5 +236,3 @@ export async function encryptNumber(number, keyString) {
 
   return btoa(String.fromCharCode(...encryptedBytes));
 }
-
-

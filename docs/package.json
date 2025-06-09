@@ -1,0 +1,15 @@
+{
+  "name": "fcds-system-docs",
+  "version": "1.0.0",
+  "description": "Documentation generator for FCDS System",
+  "main": "generate_pdf.js",
+  "scripts": {
+    "generate-docs": "node generate_pdf.js"
+  },
+  "dependencies": {
+    "markdown-pdf": "^11.0.0",
+    "markdown-it-anchor": "^8.6.7",
+    "markdown-it": "^13.0.1",
+    "phantomjs-prebuilt": "^2.1.16"
+  }
+} 
