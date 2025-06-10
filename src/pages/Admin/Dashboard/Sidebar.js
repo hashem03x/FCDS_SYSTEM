@@ -26,7 +26,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ListItemIcon, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 
 const drawerWidth = 240;
@@ -89,6 +89,9 @@ export default function MiniDrawer() {
   const theme = useTheme();
   const [open, setOpen] = React.useState(false);
   const { logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const handleDrawerOpen = () => {
     setOpen(true);
   };
@@ -97,7 +100,16 @@ export default function MiniDrawer() {
     setOpen(false);
   };
 
-  const navigate = useNavigate();
+  const menuItems = [
+    { text: "Home", path: "/admin", icon: faHouse },
+    { text: "Users", path: "/admin/users", icon: faUsers },
+    { text: "Courses", path: "/admin/courses", icon: faBook },
+    { text: "Sections", path: "/admin/sections", icon: faLayerGroup },
+    { text: "Complaints", path: "/admin/complaints", icon: faExclamationTriangle },
+    { text: "Fees", path: "/admin/fees", icon: faMoneyBillAlt },
+    { text: "Exams", path: "/admin/exams", icon: faFilePen },
+    { text: "Grades", path: "/admin/grades", icon: faUserGraduate },
+  ];
 
   return (
     <Box sx={{ display: "flex", backgroundColor: "white" }}>
@@ -107,98 +119,76 @@ export default function MiniDrawer() {
         <DrawerHeader>
           <IconButton>
             {open ? (
-              <FontAwesomeIcon
-                onClick={handleDrawerClose}
-                icon={faAnglesLeft}
-              />
+              <FontAwesomeIcon onClick={handleDrawerClose} icon={faAnglesLeft} />
             ) : (
-              <FontAwesomeIcon
-                onClick={handleDrawerOpen}
-                icon={faAnglesRight}
-              />
+              <FontAwesomeIcon onClick={handleDrawerOpen} icon={faAnglesRight} />
             )}
             {theme.direction === "rtl" ? "" : ""}
           </IconButton>
         </DrawerHeader>
         <Divider />
         <List>
-          {[
-            "Home",
-            "Users",
-            "Courses",
-            "Sections",
-            "Complaints",
-            "Fees",
-            "Exams",
-            "Grades",
-          ].map((text, index) => (
-            <ListItem key={text} disablePadding sx={{ display: "block" }}>
-              <ListItemButton
-                onClick={() => {
-                  index === 0 && navigate("/admin");
-                  index === 1 && navigate("/admin/users");
-                  index === 2 && navigate("/admin/courses");
-                  index === 3 && navigate("/admin/sections");
-                  index === 4 && navigate("/admin/complaints");
-                  index === 5 && navigate("/admin/fees");
-                  index === 6 && navigate("/admin/exams");
-                  index === 7 && navigate("/admin/grades");
-                }}
-                sx={[
-                  {
-                    minHeight: 48,
-                    px: 2.5,
-                  },
-                  open
-                    ? {
-                        justifyContent: "initial",
-                      }
-                    : {
-                        justifyContent: "center",
-                      },
-                ]}
-              >
-                <ListItemIcon
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <ListItem key={item.text} disablePadding sx={{ display: "block" }}>
+                <ListItemButton
+                  onClick={() => navigate(item.path)}
                   sx={[
                     {
-                      minWidth: 0,
-                      justifyContent: "center",
+                      minHeight: 48,
+                      px: 2.5,
+                      backgroundColor: isActive ? "rgba(0, 0, 0, 0.08)" : "transparent",
+                      "&:hover": {
+                        backgroundColor: isActive ? "rgba(0, 0, 0, 0.12)" : "rgba(0, 0, 0, 0.04)",
+                      },
                     },
                     open
                       ? {
-                          mr: 3,
+                          justifyContent: "initial",
                         }
                       : {
-                          mr: "auto",
+                          justifyContent: "center",
                         },
                   ]}
                 >
-                  {index === 0 && <FontAwesomeIcon icon={faHouse} />}
-                  {index === 1 && <FontAwesomeIcon icon={faUsers} />}
-                  {index === 2 && <FontAwesomeIcon icon={faBook} />}
-                  {index === 3 && <FontAwesomeIcon icon={faLayerGroup} />}
-                  {index === 4 && (
-                    <FontAwesomeIcon icon={faExclamationTriangle} />
-                  )}
-                  {index === 5 && <FontAwesomeIcon icon={faMoneyBillAlt} />}
-                  {index === 6 && <FontAwesomeIcon icon={faFilePen} />}
-                  {index === 7 && <FontAwesomeIcon icon={faUserGraduate} />}
-                </ListItemIcon>
-                <ListItemText
-                  primary={text}
-                  sx={[
-                    open
-                      ? {
-                          opacity: 1,
-                        }
-                      : {
-                          opacity: 0,
-                        },
-                  ]}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
+                  <ListItemIcon
+                    sx={[
+                      {
+                        minWidth: 0,
+                        justifyContent: "center",
+                        color: isActive ? "primary.main" : "inherit",
+                      },
+                      open
+                        ? {
+                            mr: 3,
+                          }
+                        : {
+                            mr: "auto",
+                          },
+                    ]}
+                  >
+                    <FontAwesomeIcon icon={item.icon} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.text}
+                    sx={[
+                      {
+                        color: isActive ? "primary.main" : "inherit",
+                      },
+                      open
+                        ? {
+                            opacity: 1,
+                          }
+                        : {
+                            opacity: 0,
+                          },
+                    ]}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
         </List>
         <List>
           {["Logout"].map((text, index) => (

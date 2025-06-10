@@ -24,7 +24,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ListItemIcon, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 
 const drawerWidth = 240;
@@ -87,6 +87,9 @@ export default function MiniDrawer() {
   const theme = useTheme();
   const [open, setOpen] = React.useState(false);
   const { logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const handleDrawerOpen = () => {
     setOpen(true);
   };
@@ -95,7 +98,38 @@ export default function MiniDrawer() {
     setOpen(false);
   };
 
-  const navigate = useNavigate();
+  const menuItems = [
+    {
+      path: "/student",
+      name: "Home",
+      icon: faHouse,
+    },
+    {
+      path: "/student/performance",
+      name: "Performance",
+      icon: faChartSimple,
+    },
+    {
+      path: "/student/registration",
+      name: "Registration",
+      icon: faFileLines,
+    },
+    {
+      path: "/student/lectures-table",
+      name: "Lectures Table",
+      icon: faCalendarDays,
+    },
+    {
+      path: "/student/exams-table",
+      name: "Exam's Table",
+      icon: faGraduationCap,
+    },
+    {
+      path: "/student/attendance",
+      name: "Attendance",
+      icon: faClipboardUser,
+    },
+  ];
 
   return (
     <Box sx={{ display: "flex", backgroundColor: "white" }}>
@@ -105,215 +139,149 @@ export default function MiniDrawer() {
         <DrawerHeader>
           <IconButton>
             {open ? (
-              <FontAwesomeIcon
-                onClick={handleDrawerClose}
-                icon={faAnglesLeft}
-              />
+              <FontAwesomeIcon onClick={handleDrawerClose} icon={faAnglesLeft} />
             ) : (
-              <FontAwesomeIcon
-                onClick={handleDrawerOpen}
-                icon={faAnglesRight}
-              />
+              <FontAwesomeIcon onClick={handleDrawerOpen} icon={faAnglesRight} />
             )}
             {theme.direction === "rtl" ? "" : ""}
           </IconButton>
         </DrawerHeader>
         <Divider />
         <List>
-          {[
-            "Home",
-            "Performance",
-            "Registration",
-            "Lectures Table",
-            "Exam's Table",
-            "Attendance",
-          ].map((text, index) => (
-            <ListItem key={text} disablePadding sx={{ display: "block" }}>
-              <ListItemButton
-                onClick={() => {
-                  index === 0 && navigate("/student");
-                  index === 1 && navigate("/student/performance");
-                  index === 2 && navigate("/student/registration");
-                  index === 3 && navigate("/student/lectures-table");
-                  index === 4 && navigate("/student/exams-table");
-                  index === 5 && navigate("/student/attendance");
-                }}
-                sx={[
-                  {
-                    minHeight: 48,
-                    px: 2.5,
-                  },
-                  open
-                    ? {
-                        justifyContent: "initial",
-                      }
-                    : {
-                        justifyContent: "center",
-                      },
-                ]}
-              >
-                <ListItemIcon
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <ListItem key={item.name} disablePadding sx={{ display: "block" }}>
+                <ListItemButton
+                  onClick={() => navigate(item.path)}
                   sx={[
                     {
-                      minWidth: 0,
-                      justifyContent: "center",
+                      minHeight: 48,
+                      px: 2.5,
+                      backgroundColor: isActive ? "rgba(0, 0, 0, 0.08)" : "transparent",
+                      "&:hover": {
+                        backgroundColor: isActive ? "rgba(0, 0, 0, 0.12)" : "rgba(0, 0, 0, 0.04)",
+                      },
                     },
                     open
                       ? {
-                          mr: 3,
+                          justifyContent: "initial",
                         }
                       : {
-                          mr: "auto",
+                          justifyContent: "center",
                         },
                   ]}
                 >
-                  {index === 0 && <FontAwesomeIcon icon={faHouse} />}
-                  {index === 1 && <FontAwesomeIcon icon={faChartSimple} />}
-                  {index === 2 && <FontAwesomeIcon icon={faFileLines} />}
-                  {index === 3 && <FontAwesomeIcon icon={faCalendarDays} />}
-                  {index === 4 && <FontAwesomeIcon icon={faGraduationCap} />}
-                  {index === 5 && <FontAwesomeIcon icon={faClipboardUser} />}
-                </ListItemIcon>
-                <ListItemText
-                  primary={text}
-                  sx={[
-                    open
-                      ? {
-                          opacity: 1,
-                        }
-                      : {
-                          opacity: 0,
-                        },
-                  ]}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
+                  <ListItemIcon
+                    sx={[
+                      {
+                        minWidth: 0,
+                        justifyContent: "center",
+                        color: isActive ? "primary.main" : "inherit",
+                      },
+                      open
+                        ? {
+                            mr: 3,
+                          }
+                        : {
+                            mr: "auto",
+                          },
+                    ]}
+                  >
+                    <FontAwesomeIcon icon={item.icon} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.name}
+                    sx={[
+                      {
+                        color: isActive ? "primary.main" : "inherit",
+                      },
+                      open
+                        ? {
+                            opacity: 1,
+                          }
+                        : {
+                            opacity: 0,
+                          },
+                    ]}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
         </List>
         {open ? (
-          <Typography
-            sx={{ color: "grey", fontSize: "12px", marginLeft: "8px" }}
-          >
-            Commuincation
+          <Typography sx={{ color: "grey", fontSize: "12px", marginLeft: "8px" }}>
+            Communication
           </Typography>
         ) : (
           <Divider sx={{ border: "1px solid" }} />
         )}
         <List>
-          {["Messages"].map((text, index) => (
-            <ListItem key={text} disablePadding sx={{ display: "block" }}>
-              <ListItemButton
-                onClick={() => navigate("/student/messages")}
-                sx={[
-                  {
-                    minHeight: 48,
-                    px: 2.5,
-                  },
-                  open
-                    ? {
-                        justifyContent: "initial",
-                      }
-                    : {
-                        justifyContent: "center",
-                      },
-                ]}
-              >
-                <ListItemIcon
+          {["Messages"].map((text) => {
+            const isActive = location.pathname === "/student/messages";
+            return (
+              <ListItem key={text} disablePadding sx={{ display: "block" }}>
+                <ListItemButton
+                  onClick={() => navigate("/student/messages")}
                   sx={[
                     {
-                      minWidth: 0,
-                      justifyContent: "center",
+                      minHeight: 48,
+                      px: 2.5,
+                      backgroundColor: isActive ? "rgba(0, 0, 0, 0.08)" : "transparent",
+                      "&:hover": {
+                        backgroundColor: isActive ? "rgba(0, 0, 0, 0.12)" : "rgba(0, 0, 0, 0.04)",
+                      },
                     },
                     open
                       ? {
-                          mr: 3,
+                          justifyContent: "initial",
                         }
                       : {
-                          mr: "auto",
+                          justifyContent: "center",
                         },
                   ]}
                 >
-                  <FontAwesomeIcon icon={faComment} />
-                </ListItemIcon>
-                <ListItemText
-                  primary={text}
-                  sx={[
-                    open
-                      ? {
-                          opacity: 1,
-                        }
-                      : {
-                          opacity: 0,
-                        },
-                  ]}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-        {open ? (
-          <Typography
-            sx={{ color: "grey", fontSize: "12px", marginLeft: "8px" }}
-          >
-            Settings
-          </Typography>
-        ) : (
-          <Divider sx={{ border: "1px solid" }} />
-        )}
-        <List>
-          {["Settings"].map((text, index) => (
-            <ListItem key={text} disablePadding sx={{ display: "block" }}>
-              <ListItemButton
-                onClick={() => navigate("/student/settings")}
-                sx={[
-                  {
-                    minHeight: 48,
-                    px: 2.5,
-                  },
-                  open
-                    ? {
-                        justifyContent: "initial",
-                      }
-                    : {
+                  <ListItemIcon
+                    sx={[
+                      {
+                        minWidth: 0,
                         justifyContent: "center",
+                        color: isActive ? "primary.main" : "inherit",
                       },
-                ]}
-              >
-                <ListItemIcon
-                  sx={[
-                    {
-                      minWidth: 0,
-                      justifyContent: "center",
-                    },
-                    open
-                      ? {
-                          mr: 3,
-                        }
-                      : {
-                          mr: "auto",
-                        },
-                  ]}
-                >
-                  <FontAwesomeIcon icon={faGear} />
-                </ListItemIcon>
-                <ListItemText
-                  primary={text}
-                  sx={[
-                    open
-                      ? {
-                          opacity: 1,
-                        }
-                      : {
-                          opacity: 0,
-                        },
-                  ]}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
+                      open
+                        ? {
+                            mr: 3,
+                          }
+                        : {
+                            mr: "auto",
+                          },
+                    ]}
+                  >
+                    <FontAwesomeIcon icon={faComment} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={text}
+                    sx={[
+                      {
+                        color: isActive ? "primary.main" : "inherit",
+                      },
+                      open
+                        ? {
+                            opacity: 1,
+                          }
+                        : {
+                            opacity: 0,
+                          },
+                    ]}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
         </List>
         <List>
-          {["Logout"].map((text, index) => (
+          {["Logout"].map((text) => (
             <ListItem key={text} disablePadding sx={{ display: "block" }}>
               <ListItemButton
                 onClick={() => logout()}

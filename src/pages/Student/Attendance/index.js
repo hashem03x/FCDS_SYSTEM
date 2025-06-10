@@ -8,11 +8,34 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  Grid,
+  Box,
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 import Webcam from "react-webcam";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { useAuth } from "../../../context/AuthContext";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCalendarCheck,
+  faCalendarXmark,
+  faPercent,
+  faChevronDown,
+  faBook,
+  faCamera,
+} from "@fortawesome/free-solid-svg-icons";
+import { BASE_URL } from "../../../utils/api";
 
 const Attendance = () => {
   const webcamRef = useRef(null);
@@ -20,13 +43,36 @@ const Attendance = () => {
   const [response, setResponse] = useState(null);
   const [error, setError] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
-  const { user } = useAuth();
+  const { user, authToken } = useAuth();
   const [isWebcamActive, setIsWebcamActive] = useState(false);
+  const [attendanceStats, setAttendanceStats] = useState(null);
+  const [loading, setLoading] = useState(true);
   console.log("user", user);
   const videoConstraints = {
     width: 480,
     height: 360,
     facingMode: "user",
+  };
+
+  useEffect(() => {
+    fetchAttendanceHistory();
+  }, []);
+
+  const fetchAttendanceHistory = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/attendence/history`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+        method: "GET",
+      });
+      const data = await response.json();
+      setAttendanceStats(data);
+    } catch (error) {
+      console.error("Error fetching attendance history:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const startAttendance = () => {
@@ -113,79 +159,225 @@ const Attendance = () => {
     }
   };
 
-  return (
-    <Container maxWidth="sm" sx={{ mt: 5, textAlign: "center" }}>
-      <Card elevation={4} sx={{ p: 2 }}>
-        <CardContent>
-          <Typography variant="h4" className="mb-5" gutterBottom>
-            Attendance System
-          </Typography>
-          {!isWebcamActive ? (
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              onClick={startAttendance}
-              sx={{ mb: 2 }}
-            >
-              Take Attendance
-            </Button>
-          ) : (
-            <>
-              <div style={{ position: "relative", width: 480, height: 360, margin: "auto" }}>
-                <Webcam
-                  audio={false}
-                  ref={webcamRef}
-                  screenshotFormat="image/jpeg"
-                  videoConstraints={videoConstraints}
-                  style={{ width: "100%", height: "100%", borderRadius: 10 }}
-                />
-                <div style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: 10,
-                  backgroundColor: "rgba(0,0,0,0.6)",
-                  boxSizing: "border-box",
-                  pointerEvents: "none",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  maskImage: "radial-gradient(circle at center, transparent 130px, black 130px)",
-                  WebkitMaskImage: "radial-gradient(circle at center, transparent 130px, black 130px)",
-                }}>
-                </div>
-                <div style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 260,
-                  height: 260,
-                  border: "2px dashed #fff",
-                  borderRadius: "50%",
-                  pointerEvents: "none",
-                }}></div>
-              </div>
+  const calculateCourseStats = (course) => {
+    const totalLectures = course.attendedLectures.length + course.missedLectures.length;
+    const totalSections = course.sections.reduce(
+      (acc, section) => acc + section.attendedSessions.length + section.missedSessions.length,
+      0
+    );
+    const totalSessions = totalLectures + totalSections;
+    const attendedSessions = course.attendedLectures.length + 
+      course.sections.reduce((acc, section) => acc + section.attendedSessions.length, 0);
+    const attendanceRate = totalSessions > 0 ? (attendedSessions / totalSessions) * 100 : 0;
 
-              {capturing ? (
-                <CircularProgress sx={{ mt: 2 }} />
-              ) : (
+    return {
+      totalSessions,
+      attendedSessions,
+      missedSessions: totalSessions - attendedSessions,
+      attendanceRate: attendanceRate.toFixed(1),
+    };
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 5 }}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <Card elevation={4} sx={{ p: 2 }}>
+            <CardContent>
+              <Typography variant="h4" className="mb-5" gutterBottom>
+                Attendance System
+              </Typography>
+              <Box sx={{ textAlign: "center", mt: 2 }}>
+                <Typography variant="h6" gutterBottom startIcon={<FontAwesomeIcon icon={faCamera} />}>
+                  Take Attendance
+                </Typography>
+                <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+                  <Typography variant="subtitle1" color="primary" gutterBottom>
+                    Important Instructions:
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    • Position yourself in a well-lit area and ensure your face is clearly visible in the camera frame
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Connect to the designated hall WiFi network before proceeding with attendance
+                  </Typography>
+                </Box>
+
+              </Box>
+              {!isWebcamActive ? (
                 <Button
                   variant="contained"
                   color="primary"
-                  sx={{ mt: 2 }}
-                  onClick={captureImage}
+                  size="large"
+                  onClick={startAttendance}
+                  sx={{ mb: 2 }}
                 >
-                  Retry Capture
+                  Take Attendance
                 </Button>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      position: "relative",
+                      width: 480,
+                      height: 360,
+                      margin: "auto",
+                    }}
+                  >
+                    <Webcam
+                      audio={false}
+                      ref={webcamRef}
+                      screenshotFormat="image/jpeg"
+                      videoConstraints={videoConstraints}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        borderRadius: 10,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        borderRadius: 10,
+                        backgroundColor: "rgba(0,0,0,0.6)",
+                        boxSizing: "border-box",
+                        pointerEvents: "none",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        maskImage:
+                          "radial-gradient(circle at center, transparent 130px, black 130px)",
+                        WebkitMaskImage:
+                          "radial-gradient(circle at center, transparent 130px, black 130px)",
+                      }}
+                    ></div>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: 260,
+                        height: 260,
+                        border: "2px dashed #fff",
+                        borderRadius: "50%",
+                        pointerEvents: "none",
+                      }}
+                    ></div>
+                  </div>
+
+                  {capturing ? (
+                    <CircularProgress sx={{ mt: 2 }} />
+                  ) : (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      sx={{ mt: 2 }}
+                      onClick={captureImage}
+                    >
+                      Retry Capture
+                    </Button>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card elevation={4} sx={{ p: 2, height: "100%" }}>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                Attendance Stats
+              </Typography>
+              {loading ? (
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
+                  <CircularProgress />
+                </Box>
+              ) : attendanceStats?.data ? (
+                <>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {attendanceStats.data.courses.map((course) => {
+                    const stats = calculateCourseStats(course);
+                    return (
+                      <Accordion key={course.code} sx={{ mb: 2 }}>
+                        <AccordionSummary
+                          expandIcon={<FontAwesomeIcon icon={faChevronDown} />}
+                        >
+                          <Box sx={{ width: '100%' }}>
+                            <Typography variant="subtitle1" fontWeight="bold">
+                              {course.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Attendance Rate: {stats.attendanceRate}%
+                            </Typography>
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2">
+                              <strong>Total Sessions:</strong> {stats.totalSessions}
+                            </Typography>
+                            <Typography variant="body2" color="success.main">
+                              <strong>Attended:</strong> {stats.attendedSessions}
+                            </Typography>
+                            <Typography variant="body2" color="error.main">
+                              <strong>Missed:</strong> {stats.missedSessions}
+                            </Typography>
+                          </Box>
+
+                          <Typography variant="subtitle2" gutterBottom>
+                            Recent Absences:
+                          </Typography>
+                          <TableContainer component={Paper} variant="outlined">
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Date</TableCell>
+                                  <TableCell>Time</TableCell>
+                                  <TableCell>Room</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {course.missedLectures.slice(0, 3).map((lecture, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>{formatDate(lecture.date)}</TableCell>
+                                    <TableCell>{lecture.time}</TableCell>
+                                    <TableCell>{lecture.room}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </AccordionDetails>
+                      </Accordion>
+                    );
+                  })}
+                </>
+              ) : (
+                <Typography color="text.secondary">
+                  No attendance data available
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       {/* {response && (
         <Alert sx={{ mt: 3 }} severity="success">
