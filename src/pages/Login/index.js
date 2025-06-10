@@ -4,6 +4,8 @@ import {
   Grid,
   TextField,
   Button,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import "./login.css";
@@ -12,12 +14,19 @@ import login_bg_shapes from "../../assets/images/login_bg_shapes.png";
 import login_image from "../../assets/images/login_image.png";
 import { useAuth } from "../../context/AuthContext.js";
 import { CircularProgress } from "@mui/material";
+import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 function Login() {
   const [ID, setID] = useState("");
   const [password, setPassword] = useState("");
   const [isDisabled, setIsDisabled] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading } = useAuth();
+
+  function togglePasswordVisibility() {
+    setShowPassword(!showPassword);
+  }
 
   useEffect(() => {
     setIsDisabled(!(ID && password));
@@ -86,7 +95,14 @@ function Login() {
           }}
         >
           <div style={{ width: "100%", maxWidth: "400px" }}>
-            <div style={{ position: "absolute", zIndex: 2 , top: "20px", right: "20px"}}>
+            <div
+              style={{
+                position: "absolute",
+                zIndex: 2,
+                top: "20px",
+                right: "20px",
+              }}
+            >
               <img src={logo} alt="Alexu Logo" width={180} />
             </div>
             <div style={{ textAlign: "left", marginBottom: "20px" }}>
@@ -107,12 +123,23 @@ function Login() {
               <TextField
                 id="password"
                 label="Password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 variant="outlined"
                 fullWidth
                 className="mt-3"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={togglePasswordVisibility} edge="end">
+                        <FontAwesomeIcon
+                          icon={showPassword ? faEyeSlash : faEye}
+                        />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
               <FormControlLabel
                 control={
