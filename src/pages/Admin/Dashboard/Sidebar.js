@@ -109,6 +109,7 @@ export default function MiniDrawer() {
     { text: "Fees", path: "/admin/fees", icon: faMoneyBillAlt },
     { text: "Exams", path: "/admin/exams", icon: faFilePen },
     { text: "Grades", path: "/admin/grades", icon: faUserGraduate },
+    { text: "System Settings", path: "/admin/system-settings", icon: faGear },
   ];
 
   return (

@@ -39,6 +39,7 @@ import DoctorStudents from "./pages/Doctor/Students";
 import DoctorGrades from "./pages/Doctor/Grades";
 import DoctorSettings from "./pages/Doctor/Settings";
 import DoctorLectures from "./pages/Doctor/Lectures";
+import SystemSettings from "./pages/Admin/SystemSettings/SystemSettings";
 
 // Memoized route components
 const MemoizedLogin = React.memo(Login);
@@ -75,6 +76,7 @@ const App = React.memo(() => {
       <Route path="fees" element={<Fees />} />
       <Route path="exams" element={<Exams />} />
       <Route path="grades" element={<Grades />} />
+      <Route path="system-settings" element={<SystemSettings />} />
     </Route>
   ), []);
 
