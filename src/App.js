@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { AdminProvider } from "./context/AdminContext";
+import { DoctorProvider } from "./context/DoctorContext";
 import PrivateRoutes from "./routes/PrivateRoutes";
 import PublicRoutes from "./routes/PublicRoutes";
 
@@ -30,11 +31,21 @@ import ExamsTable from "./pages/Student/Exams";
 import Settings from "./pages/Student/Settings";
 import Attendance from "./pages/Student/Attendance";
 
+// Doctor Pages
+import DoctorLayout from "./pages/Doctor/DoctorLayout";
+import DoctorDashboard from "./pages/Doctor/Dashboard";
+import DoctorCourses from "./pages/Doctor/Courses";
+import DoctorStudents from "./pages/Doctor/Students";
+import DoctorGrades from "./pages/Doctor/Grades";
+import DoctorSettings from "./pages/Doctor/Settings";
+import DoctorLectures from "./pages/Doctor/Lectures";
+
 // Memoized route components
 const MemoizedLogin = React.memo(Login);
 const MemoizedPageNotFound = React.memo(PageNotFound);
 const MemoizedAdminLayout = React.memo(AdminLayout);
 const MemoizedStudentLayout = React.memo(StudentLayout);
+const MemoizedDoctorLayout = React.memo(DoctorLayout);
 
 const App = React.memo(() => {
   // Memoize route configurations
@@ -86,6 +97,26 @@ const App = React.memo(() => {
     </Route>
   ), []);
 
+  const doctorRoutes = useMemo(() => (
+    <Route
+      path="/doctor/*"
+      element={
+        <PrivateRoutes role="doctor">
+          <DoctorProvider>
+            <MemoizedDoctorLayout />
+          </DoctorProvider>
+        </PrivateRoutes>
+      }
+    >
+      <Route index element={<DoctorDashboard />} />
+      <Route path="courses" element={<DoctorCourses />} />
+      <Route path="students" element={<DoctorStudents />} />
+      <Route path="grades" element={<DoctorGrades />} />
+      <Route path="settings" element={<DoctorSettings />} />
+      <Route path="lectures" element={<DoctorLectures />} />
+    </Route>
+  ), []);
+
   return (
     <Router>
       <AuthProvider>
@@ -93,6 +124,7 @@ const App = React.memo(() => {
           {publicRoutes}
           {adminRoutes}
           {studentRoutes}
+          {doctorRoutes}
           <Route path="*" element={<MemoizedPageNotFound />} />
         </Routes>
       </AuthProvider>

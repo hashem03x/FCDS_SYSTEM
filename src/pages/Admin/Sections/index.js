@@ -37,11 +37,13 @@ import { BASE_URL } from "../../../utils/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrashCan,
-  faUserPen,
+  faFilePen,
   faPlus,
   faClipboardList,
   faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
+import { useAdmin } from "../../../context/AdminContext";
+import { Form } from "react-router-dom";
 
 const initialFormState = {
   sectionId: "",
@@ -61,8 +63,9 @@ function Sections() {
   const [isEditingSection, setIsEditingSection] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState(null);
   const [selectedCourseCode, setSelectedCourseCode] = useState("");
+  const [selectedTA, setSelectedTA] = useState("");
   const [expandedCourse, setExpandedCourse] = useState(null);
-
+  const { teachingAssistants } = useAdmin();
   const { authToken } = useAuth();
 
   const fetchCourses = async () => {
@@ -266,9 +269,7 @@ function Sections() {
           key={course._id}
           expanded={expandedCourse === course._id}
           onChange={() =>
-            setExpandedCourse(
-              expandedCourse === course._id ? null : course._id
-            )
+            setExpandedCourse(expandedCourse === course._id ? null : course._id)
           }
           sx={{
             mb: 2,
@@ -280,7 +281,7 @@ function Sections() {
           <AccordionSummary
             expandIcon={<FontAwesomeIcon icon={faChevronDown} />}
             sx={{
-              backgroundColor: "primary.light",
+              backgroundColor: "white",
               borderRadius: "8px 8px 0 0",
             }}
           >
@@ -329,14 +330,17 @@ function Sections() {
                               onClick={() => handleOpenForm(course, section)}
                               color="primary"
                             >
-                              <FontAwesomeIcon icon={faUserPen} />
+                              <FontAwesomeIcon icon={faFilePen} />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Delete Section">
                             <IconButton
                               size="small"
                               onClick={() =>
-                                handleDeleteSection(course.code, section.sectionId)
+                                handleDeleteSection(
+                                  course.code,
+                                  section.sectionId
+                                )
                               }
                               color="error"
                             >
@@ -348,7 +352,13 @@ function Sections() {
 
                       <Stack spacing={1}>
                         <Typography variant="body2">
-                          <strong>TA:</strong> {section.taId}
+                          {teachingAssistants.map((ta) =>
+                            ta.id === section.taId ? (
+                              <span>
+                                <strong>TA:</strong> {ta.name}
+                              </span>
+                            ) : null
+                          )}
                         </Typography>
                         <Typography variant="body2">
                           <strong>Capacity:</strong> {section.capacity}
@@ -438,14 +448,22 @@ function Sections() {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField
-                label="TA ID"
-                fullWidth
-                value={formData.taId}
-                onChange={(e) =>
-                  setFormData({ ...formData, taId: e.target.value })
-                }
-              />
+              <FormControl fullWidth>
+                <InputLabel>Teaching Assistant</InputLabel>
+                <Select
+                  value={selectedTA}
+                  onChange={(e) => setSelectedTA(e.target.value)}
+                  label="Select TA"
+                  disabled={isEditingSection}
+                >
+                  {console.log(teachingAssistants)}
+                  {teachingAssistants.map((ta) => (
+                    <MenuItem key={ta.id} value={ta.name}>
+                      {ta.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

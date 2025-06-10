@@ -10,12 +10,10 @@ import "./login.css";
 import logo from "../../assets/images/logo.png";
 import login_bg_shapes from "../../assets/images/login_bg_shapes.png";
 import login_image from "../../assets/images/login_image.png";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.js";
 import { CircularProgress } from "@mui/material";
 
 function Login() {
-  const navigate = useNavigate();
   const [ID, setID] = useState("");
   const [password, setPassword] = useState("");
   const [isDisabled, setIsDisabled] = useState(true);

@@ -9,7 +9,7 @@ import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
-import { ButtonGroup, Skeleton } from "@mui/material";
+import { ButtonGroup, Skeleton, Alert } from "@mui/material";
 import Swal from "sweetalert2";
 import { BASE_URL } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
@@ -23,7 +23,8 @@ function Registration() {
   const [selectedSections, setSelectedSections] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [schedule, setSchedule] = useState({});
-  const { user  , authToken} = useAuth();
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
+  const { user, authToken } = useAuth();
 
   const fetchCourses = async () => {
     try {
@@ -37,10 +38,18 @@ function Registration() {
         }
       );
 
-      if (!response.ok) throw new Error("Failed to load courses");
+      if (!response.ok) {
+        const data = await response.json();
+        if (data.registrationOpen === false) {
+          setIsRegistrationOpen(false);
+          return;
+        }
+        throw new Error(data.message || "Failed to load courses");
+      }
 
       const data = await response.json();
       setCourses(data.courses);
+      setIsRegistrationOpen(true);
 
       const initialSelections = {};
       data.courses.forEach((course) => {
@@ -251,25 +260,35 @@ function Registration() {
   };
   return (
     <div>
-      <CoursesTable
-        courses={courses}
-        isLoading={isLoading}
-        isCourseRegistered={isCourseRegistered}
-        toggleRegistration={toggleCourseRegistration}
-        selectedSections={selectedSections}
-        handleSectionChange={handleSectionChange}
-        registeredSections={registeredSections}
-        registeredCourses={registeredCourses}
-        setRegisteredCourses={setRegisteredCourses}
-        setRegisteredSections={setRegisteredSections}
-        setSchedule={setSchedule}
-        fetchCourses={fetchCourses}
-        setIsLoading={setIsLoading}
-      />
-      <h3 style={{ marginTop: "20px", textAlign: "center" }}>
-        Lecture Schedule
-      </h3>
-      <LectureSchedule schedule={schedule} />
+      {!isRegistrationOpen && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Course registration is currently closed. Please check back later.
+        </Alert>
+      )}
+      {isRegistrationOpen && (
+        <>
+          <CoursesTable
+            courses={courses}
+            isLoading={isLoading}
+            isCourseRegistered={isCourseRegistered}
+            toggleRegistration={toggleCourseRegistration}
+            selectedSections={selectedSections}
+            handleSectionChange={handleSectionChange}
+            registeredSections={registeredSections}
+            registeredCourses={registeredCourses}
+            setRegisteredCourses={setRegisteredCourses}
+            setRegisteredSections={setRegisteredSections}
+            setSchedule={setSchedule}
+            fetchCourses={fetchCourses}
+            setIsLoading={setIsLoading}
+            isRegistrationOpen={isRegistrationOpen}
+          />
+          <h3 style={{ marginTop: "20px", textAlign: "center" }}>
+            Lecture Schedule
+          </h3>
+          <LectureSchedule schedule={schedule} />
+        </>
+      )}
     </div>
   );
 }
@@ -288,8 +307,9 @@ function CoursesTable({
   setSchedule,
   fetchCourses,
   setIsLoading,
+  isRegistrationOpen,
 }) {
-  const { user , authToken} = useAuth();
+  const { user, authToken } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
 
   const handleClearAll = () => {
@@ -499,7 +519,10 @@ function CoursesTable({
                               handleSectionChange(course.code, e.target.value);
                             }}
                             size="small"
-                            disabled={isCourseRegistered(course.code)}
+                            disabled={
+                              isCourseRegistered(course.code) ||
+                              !isRegistrationOpen
+                            }
                             sx={{ width: "100%", mb: 1 }}
                           >
                             {course.sections.map((section) => (
@@ -538,6 +561,7 @@ function CoursesTable({
                             ? toggleUnRegister(course)
                             : toggleRegistration(course)
                         }
+                        disabled={!isRegistrationOpen}
                       >
                         {course.isRegistered
                           ? "Unregister"
@@ -564,7 +588,7 @@ function CoursesTable({
           className="me-4"
           color="primary"
           onClick={() => handleRegister()}
-          disabled={isSaving}
+          disabled={isSaving || !isRegistrationOpen}
         >
           {isSaving ? "Saving..." : "Save"}
           {!isSaving && (
@@ -576,6 +600,7 @@ function CoursesTable({
           onClick={() => handleClearAll()}
           variant="contained"
           color="error"
+          disabled={!isRegistrationOpen}
         >
           Clear All <FontAwesomeIcon className="ms-3" icon={faTrashCan} />
         </Button>

@@ -194,7 +194,11 @@ export default function Exams() {
         throw new Error(error.message || "Failed to save exam");
       }
 
-      Swal.fire("Success", `Exam ${editingExam ? "updated" : "added"} successfully`, "success");
+      Swal.fire(
+        "Success",
+        `Exam ${editingExam ? "updated" : "added"} successfully`,
+        "success"
+      );
       handleClose();
       fetchExams();
     } catch (err) {
@@ -236,12 +240,8 @@ export default function Exams() {
     setSelectedYear(newValue);
   };
 
-  const filteredExams = selectedDepartment
-    ? examsData[selectedDepartment]?.filter(
-        (exam) => exam.academicLevel === academicLevels[selectedYear]
-      ) || []
-    : [];
-
+  const filteredExams = selectedDepartment ? examsData[selectedDepartment] : [];
+  console.log("Exams Data", examsData[selectedDepartment]);
   return (
     <Box p={4}>
       <Stack
@@ -290,6 +290,8 @@ export default function Exams() {
             Select Department
           </Typography>
           <Grid container spacing={3}>
+            {console.log(departments)}
+            {console.log(examsData)}
             {departments.map((dept) => (
               <Grid item xs={12} sm={6} md={4} key={dept}>
                 <Card
@@ -335,23 +337,6 @@ export default function Exams() {
             </Typography>
           </Box>
 
-          <Card elevation={2} sx={{ mb: 3, borderRadius: 2 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Select Academic Year
-              </Typography>
-              <Tabs
-                value={selectedYear}
-                onChange={handleYearChange}
-                variant="fullWidth"
-                sx={{ borderBottom: 1, borderColor: 'divider' }}
-              >
-                {academicLevels.map((level, index) => (
-                  <Tab key={level} label={level} value={index} />
-                ))}
-              </Tabs>
-            </CardContent>
-          </Card>
 
           <Card
             elevation={2}
@@ -365,7 +350,7 @@ export default function Exams() {
           >
             <CardContent>
               <Typography variant="h5" fontWeight="bold" mb={2} color="primary">
-                {selectedDepartment} - {academicLevels[selectedYear]} Year
+                {selectedDepartment}
               </Typography>
               <Divider sx={{ mb: 3 }} />
 
@@ -375,13 +360,19 @@ export default function Exams() {
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "primary.light" }}>
                         <TableCell sx={{ fontWeight: "bold" }}>ID</TableCell>
-                        <TableCell sx={{ fontWeight: "bold" }}>Course Code</TableCell>
-                        <TableCell sx={{ fontWeight: "bold" }}>Course</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>
+                          Course Code
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>
+                          Course
+                        </TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>Date</TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>Time</TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>Rooms</TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>Type</TableCell>
-                        <TableCell sx={{ fontWeight: "bold" }}>Actions</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>
+                          Actions
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -407,7 +398,8 @@ export default function Exams() {
                                 key={index}
                                 label={room}
                                 size="small"
-                                sx={{ mr: 0.5 }}
+                                
+                                sx={{ mr: 0.5 , mb: 0.8 }}
                               />
                             ))}
                           </TableCell>
@@ -452,7 +444,8 @@ export default function Exams() {
                   color="text.secondary"
                   sx={{ py: 2, textAlign: "center" }}
                 >
-                  No exams scheduled for {academicLevels[selectedYear]} year in {selectedDepartment}.
+                  No exams scheduled for {academicLevels[selectedYear]} year in{" "}
+                  {selectedDepartment}.
                 </Typography>
               )}
             </CardContent>
@@ -461,9 +454,7 @@ export default function Exams() {
       )}
 
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingExam ? "Edit Exam" : "Add New Exam"}
-        </DialogTitle>
+        <DialogTitle>{editingExam ? "Edit Exam" : "Add New Exam"}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
@@ -608,11 +599,7 @@ export default function Exams() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={loading}
-          >
+          <Button onClick={handleSubmit} variant="contained" disabled={loading}>
             {editingExam ? "Update" : "Add"}
           </Button>
         </DialogActions>

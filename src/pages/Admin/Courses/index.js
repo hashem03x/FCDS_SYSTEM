@@ -18,13 +18,16 @@ import {
   TextField,
   Skeleton,
   MenuItem,
+  Grid,
+  Stack,
+  Tooltip,
 } from "@mui/material";
 import Swal from "sweetalert2";
 import { useAuth } from "../../../context/AuthContext";
 import { useAdmin } from "../../../context/AdminContext";
 import { BASE_URL } from "../../../utils/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrashCan, faUserPen } from "@fortawesome/free-solid-svg-icons";
+import { faTrashCan, faFilePen } from "@fortawesome/free-solid-svg-icons";
 
 const initialFormState = {
   name: "",
@@ -245,15 +248,26 @@ function Courses() {
                   </TableCell>
                   <TableCell>{course.semester}</TableCell>
                   <TableCell align="right">
-                    <IconButton onClick={() => handleOpenForm(course)}>
-                      <FontAwesomeIcon icon={faUserPen} />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      onClick={() => handleDelete(course._id)}
-                    >
-                      <FontAwesomeIcon icon={faTrashCan} />
-                    </IconButton>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <Tooltip title="Edit Course">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenForm(course)}
+                          color="primary"
+                        >
+                          <FontAwesomeIcon icon={faFilePen} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete Course">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(course._id)}
+                          color="error"
+                        >
+                          <FontAwesomeIcon icon={faTrashCan} />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
                   </TableCell>
                 </TableRow>
               ))
@@ -262,101 +276,133 @@ function Courses() {
         </Table>
       </TableContainer>
 
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingCourse ? "Edit Course" : "Add Course"}</DialogTitle>
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingCourse ? "Edit Course" : "Add New Course"}
+        </DialogTitle>
         <DialogContent>
-          <TextField
-            label="Name"
-            fullWidth
-            margin="dense"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Code"
-            fullWidth
-            margin="dense"
-            name="code"
-            value={formData.code}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Credit Hours"
-            type="number"
-            fullWidth
-            margin="dense"
-            name="creditHours"
-            value={formData.creditHours}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Department"
-            fullWidth
-            margin="dense"
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-          />
-          <TextField
-            select
-            label="Doctor"
-            fullWidth
-            margin="dense"
-            name="doctorId"
-            value={formData.doctorId}
-            onChange={handleChange}
-          >
-            <MenuItem value="">
-              <em>None</em>
-            </MenuItem>
-            {doctors.map((doctor) => (
-              <MenuItem key={doctor.id} value={doctor.id}>
-                {doctor.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            label="Capacity"
-            type="number"
-            fullWidth
-            margin="dense"
-            name="capacity"
-            value={formData.capacity}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Semester"
-            fullWidth
-            margin="dense"
-            name="semester"
-            value={formData.semester}
-            onChange={handleChange}
-          />
-          <TextField
-            label="Start Date"
-            type="date"
-            fullWidth
-            margin="dense"
-            name="startDate"
-            value={formData.startDate}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            label="End Date"
-            type="date"
-            fullWidth
-            margin="dense"
-            name="endDate"
-            value={formData.endDate}
-            onChange={handleChange}
-            InputLabelProps={{ shrink: true }}
-          />
+          <Box component="form" sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Course Name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Course Code"
+                  name="code"
+                  value={formData.code}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Credit Hours"
+                  name="creditHours"
+                  type="number"
+                  value={formData.creditHours}
+                  onChange={handleChange}
+                  required
+                  inputProps={{ min: 1, max: 6 }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Department"
+                  name="department"
+                  value={formData.department}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Doctor"
+                  name="doctorId"
+                  value={formData.doctorId}
+                  onChange={handleChange}
+                  required
+                >
+                  {doctors.map((doctor) => (
+                    <MenuItem key={doctor.id} value={doctor.id}>
+                      {doctor.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Capacity"
+                  name="capacity"
+                  type="number"
+                  value={formData.capacity}
+                  onChange={handleChange}
+                  required
+                  inputProps={{ min: 1 }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Semester"
+                  name="semester"
+                  value={formData.semester}
+                  onChange={handleChange}
+                  required
+                >
+                  <MenuItem value="Fall">Fall</MenuItem>
+                  <MenuItem value="Spring">Spring</MenuItem>
+                  <MenuItem value="Summer">Summer</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Start Date"
+                  name="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="End Date"
+                  name="endDate"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={editingCourse ? handleUpdateCourse : handleAddCourse}>
+          <Button
+            onClick={editingCourse ? handleUpdateCourse : handleAddCourse}
+            variant="contained"
+            color="primary"
+          >
             {editingCourse ? "Update" : "Add"}
           </Button>
         </DialogActions>

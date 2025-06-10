@@ -1,0 +1,50 @@
+/* DoctorLayout.css */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background-color: #fff;
+  border-right: 1px solid #e0e0e0;
+  height: 100vh;
+  position: fixed;
+  top: 64px;
+  left: 0;
+  overflow-y: auto;
+}
+
+.sidebar-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.sidebar-item {
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  color: #333;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+
+.sidebar-item:hover {
+  background-color: #f5f5f5;
+}
+
+.sidebar-item.active {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.sidebar-icon {
+  margin-right: 12px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-text {
+  font-size: 14px;
+  font-weight: 500;
+} 

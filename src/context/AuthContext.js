@@ -59,7 +59,20 @@ export const AuthProvider = React.memo(({ children }) => {
       sessionStorage.setItem("userRole", data.user.role);
 
       // Navigate based on role
-      const redirectPath = data.user.role === "admin" ? "/admin/" : "/student/";
+      let redirectPath;
+      switch (data.user.role) {
+        case "admin":
+          redirectPath = "/admin/";
+          break;
+        case "doctor":
+          redirectPath = "/doctor/";
+          break;
+        case "student":
+          redirectPath = "/student/";
+          break;
+        default:
+          throw new Error("Invalid user role");
+      }
       navigate(redirectPath);
     } catch (error) {
       setAuthState(prev => ({ ...prev, isLoading: false }));

@@ -447,7 +447,7 @@ export default function Grades() {
                     </IconButton>
                   </Stack>
                 </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Credit Hours</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
