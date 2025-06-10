@@ -35,7 +35,13 @@ import { useAuth } from "../../../context/AuthContext";
 import Swal from "sweetalert2";
 import { BASE_URL } from "../../../utils/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPenToSquare, faTrash, faSearch, faTrophy, faMedal } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPenToSquare,
+  faTrash,
+  faSearch,
+  faTrophy,
+  faMedal,
+} from "@fortawesome/free-solid-svg-icons";
 
 function Grades() {
   const { courses, isLoading, error } = useDoctor();
@@ -63,9 +69,15 @@ function Grades() {
     const highestGrades = sortedGrades.slice(0, 3);
     const lowestGrades = sortedGrades.slice(-3).reverse();
 
-    const average = courseGrades.reduce((acc, grade) => acc + grade.score, 0) / courseGrades.length;
-    const passingCount = courseGrades.filter(grade => grade.score >= 60).length;
-    const failingCount = courseGrades.filter(grade => grade.score < 60).length;
+    const average =
+      courseGrades.reduce((acc, grade) => acc + grade.score, 0) /
+      courseGrades.length;
+    const passingCount = courseGrades.filter(
+      (grade) => grade.score >= 60
+    ).length;
+    const failingCount = courseGrades.filter(
+      (grade) => grade.score < 60
+    ).length;
 
     return {
       highestGrades,
@@ -73,7 +85,7 @@ function Grades() {
       average: average.toFixed(2),
       passingCount,
       failingCount,
-      totalStudents: courseGrades.length
+      totalStudents: courseGrades.length,
     };
   };
 
@@ -84,7 +96,7 @@ function Grades() {
     if (searchQuery.trim() === "") {
       setFilteredGrades(courseGrades);
     } else {
-      const filtered = courseGrades.filter(grade => 
+      const filtered = courseGrades.filter((grade) =>
         grade.studentId.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredGrades(filtered);
@@ -160,13 +172,13 @@ function Grades() {
   const handleDeleteGrade = async (studentId, courseCode) => {
     try {
       const result = await Swal.fire({
-        title: 'Are you sure?',
+        title: "Are you sure?",
         text: "You won't be able to revert this!",
-        icon: 'warning',
+        icon: "warning",
         showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, delete it!",
       });
 
       if (result.isConfirmed) {
@@ -227,13 +239,21 @@ function Grades() {
         throw new Error("Failed to add/update grade");
       }
 
-      Swal.fire("Success", isEditing ? "Grade updated successfully" : "Grade added successfully", "success");
+      Swal.fire(
+        "Success",
+        isEditing ? "Grade updated successfully" : "Grade added successfully",
+        "success"
+      );
       handleCloseModal();
       setIsEditing(false);
       // Refresh grades after adding/updating grade
       handleCourseChange({ target: { value: selectedCourse } });
     } catch (error) {
-      Swal.fire("Error", error.message || "Failed to add/update grade", "error");
+      Swal.fire(
+        "Error",
+        error.message || "Failed to add/update grade",
+        "error"
+      );
     }
   };
 
@@ -247,23 +267,48 @@ function Grades() {
     }
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("gradesFile", file);
 
     try {
       setUploading(true);
-      const response = await fetch(`${BASE_URL}/api/gpa/upload-grades/${selectedCourse}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        `${BASE_URL}/api/gpa/upload-grades/${selectedCourse}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: formData,
+        }
+      );
 
       const data = await response.json();
+      
+      if (response.ok) {
+        // Create a detailed message with the results
+        let message = `<div style="text-align: left;">
+          <h4>Upload Summary</h4>
+          <p><strong>Total Records:</strong> ${data.results.total}</p>
+          <p><strong>Successful:</strong> ${data.results.success}</p>
+          <p><strong>Failed:</strong> ${data.results.failures}</p>`;
 
-      if (data.success) {
-        Swal.fire("Success", "Grades uploaded successfully", "success");
-        // Refresh grades after uploading
+        if (data.results.errors && data.results.errors.length > 0) {
+          message += `<h4>Errors:</h4><ul>`;
+          data.results.errors.forEach(error => {
+            message += `<li>Row ${error.row}:${error.error}</li>`;
+          });
+          message += `</ul>`;
+        }
+
+
+        Swal.fire({
+          title: data.success ? "Upload Complete" : "Upload Issues",
+          html: message,
+          icon: data.results.failures === 0 ? "success" : "warning",
+          width: '600px'
+        });
+
+        // Refresh the grades list
         handleCourseChange({ target: { value: selectedCourse } });
       } else {
         throw new Error(data.message || "Failed to upload grades");
@@ -354,13 +399,17 @@ function Grades() {
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
-                      <FontAwesomeIcon icon={faTrophy} style={{ marginRight: '8px', color: '#FFD700' }} />
+                      <FontAwesomeIcon
+                        icon={faTrophy}
+                        style={{ marginRight: "8px", color: "#FFD700" }}
+                      />
                       Top Performers
                     </Typography>
                     {stats.highestGrades.map((grade, index) => (
                       <Box key={grade._id} mb={1}>
                         <Typography variant="body2">
-                          {index + 1}. {grade.studentId} - {grade.score} ({grade.grade})
+                          {index + 1}. {grade.studentId} - {grade.score} (
+                          {grade.grade})
                         </Typography>
                       </Box>
                     ))}
@@ -371,13 +420,24 @@ function Grades() {
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
-                      <FontAwesomeIcon icon={faMedal} style={{ marginRight: '8px', color: '#C0C0C0' }} />
+                      <FontAwesomeIcon
+                        icon={faMedal}
+                        style={{ marginRight: "8px", color: "#C0C0C0" }}
+                      />
                       Course Statistics
                     </Typography>
-                    <Typography variant="body2">Average Score: {stats.average}</Typography>
-                    <Typography variant="body2">Passing Students: {stats.passingCount}</Typography>
-                    <Typography variant="body2">Failing Students: {stats.failingCount}</Typography>
-                    <Typography variant="body2">Total Students: {stats.totalStudents}</Typography>
+                    <Typography variant="body2">
+                      Average Score: {stats.average}
+                    </Typography>
+                    <Typography variant="body2">
+                      Passing Students: {stats.passingCount}
+                    </Typography>
+                    <Typography variant="body2">
+                      Failing Students: {stats.failingCount}
+                    </Typography>
+                    <Typography variant="body2">
+                      Total Students: {stats.totalStudents}
+                    </Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -385,13 +445,17 @@ function Grades() {
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
-                      <FontAwesomeIcon icon={faMedal} style={{ marginRight: '8px', color: '#CD7F32' }} />
+                      <FontAwesomeIcon
+                        icon={faMedal}
+                        style={{ marginRight: "8px", color: "#CD7F32" }}
+                      />
                       Needs Improvement
                     </Typography>
                     {stats.lowestGrades.map((grade, index) => (
                       <Box key={grade._id} mb={1}>
                         <Typography variant="body2">
-                          {index + 1}. {grade.studentId} - {grade.score} ({grade.grade})
+                          {index + 1}. {grade.studentId} - {grade.score} (
+                          {grade.grade})
                         </Typography>
                       </Box>
                     ))}
@@ -446,7 +510,9 @@ function Grades() {
                   {filteredGrades.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} align="center">
-                        {searchQuery ? "No matching students found" : "No grades found for this course"}
+                        {searchQuery
+                          ? "No matching students found"
+                          : "No grades found for this course"}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -488,7 +554,12 @@ function Grades() {
                               <IconButton
                                 size="small"
                                 color="error"
-                                onClick={() => handleDeleteGrade(grade.studentId, grade.courseCode)}
+                                onClick={() =>
+                                  handleDeleteGrade(
+                                    grade.studentId,
+                                    grade.courseCode
+                                  )
+                                }
                               >
                                 <FontAwesomeIcon icon={faTrash} />
                               </IconButton>
@@ -539,11 +610,19 @@ function Grades() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => {
-            handleCloseModal();
-            setIsEditing(false);
-          }}>Cancel</Button>
-          <Button onClick={handleSubmitGrade} variant="contained" color="primary">
+          <Button
+            onClick={() => {
+              handleCloseModal();
+              setIsEditing(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmitGrade}
+            variant="contained"
+            color="primary"
+          >
             {isEditing ? "Update" : "Submit"}
           </Button>
         </DialogActions>
