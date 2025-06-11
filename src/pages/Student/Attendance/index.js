@@ -61,8 +61,36 @@ const Attendance = () => {
     }
   };
 
-  const startAttendance = () => {
-    window.open('http://localhost:5000', '_blank');
+  const startAttendance = async () => {
+    try {
+      // Fetch the HTML content from the server
+      const response = await fetch('http://localhost:5000');
+      const htmlContent = await response.text();
+
+      // Create a blob from the HTML content
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary link element
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'attendance.html';
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url);
+
+      // Open the downloaded file
+      window.open('file:///storage/Downloads/attendance.html', '_blank');
+    } catch (error) {
+      setError('Failed to download attendance page');
+      setOpenSnackbar(true);
+      console.error('Error:', error);
+    }
   };
 
   const calculateCourseStats = (course) => {
