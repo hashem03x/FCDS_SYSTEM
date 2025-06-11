@@ -21,7 +21,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  TextField,
 } from "@mui/material";
 import { useAuth } from "../../../context/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -40,8 +39,6 @@ const Attendance = () => {
   const { user, authToken } = useAuth();
   const [attendanceStats, setAttendanceStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [ipAddress, setIpAddress] = useState("");
-  const [ipError, setIpError] = useState("");
 
   useEffect(() => {
     fetchAttendanceHistory();
@@ -64,31 +61,8 @@ const Attendance = () => {
     }
   };
 
-  const validateIpAddress = (ip) => {
-    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
-    if (!ipPattern.test(ip)) {
-      setIpError("Please enter a valid IP address (e.g., 192.168.1.17)");
-      return false;
-    }
-    const parts = ip.split('.');
-    const isValid = parts.every(part => {
-      const num = parseInt(part);
-      return num >= 0 && num <= 255;
-    });
-    if (!isValid) {
-      setIpError("Each number in the IP address must be between 0 and 255");
-      return false;
-    }
-    setIpError("");
-    return true;
-  };
-
   const startAttendance = () => {
-    if (!validateIpAddress(ipAddress)) {
-      return;
-    }
-    // Open attendance page in new tab
-    window.open(`http://${ipAddress}:5000`, '_blank');
+    window.open('http://localhost:5000', '_blank');
   };
 
   const calculateCourseStats = (course) => {
@@ -140,21 +114,9 @@ const Attendance = () => {
                     • Connect to the designated hall WiFi network before proceeding with attendance
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    • Enter the server IP address provided by your instructor
+                    • Click the button below to open the attendance page
                   </Typography>
                 </Box>
-
-                <TextField
-                  fullWidth
-                  label="Server IP Address"
-                  variant="outlined"
-                  value={ipAddress}
-                  onChange={(e) => setIpAddress(e.target.value)}
-                  error={!!ipError}
-                  helperText={ipError}
-                  placeholder="e.g., 192.168.1.17"
-                  sx={{ mb: 2 }}
-                />
 
                 <Button
                   variant="contained"
@@ -162,7 +124,6 @@ const Attendance = () => {
                   size="large"
                   onClick={startAttendance}
                   sx={{ mb: 2 }}
-                  disabled={!ipAddress}
                 >
                   Open Attendance Page
                 </Button>
