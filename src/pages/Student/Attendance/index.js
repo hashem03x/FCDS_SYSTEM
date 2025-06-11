@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -23,9 +23,6 @@ import {
   Paper,
   TextField,
 } from "@mui/material";
-import Webcam from "react-webcam";
-import axios from "axios";
-import Swal from "sweetalert2";
 import { useAuth } from "../../../context/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -34,28 +31,17 @@ import {
   faPercent,
   faChevronDown,
   faBook,
-  faCamera,
 } from "@fortawesome/free-solid-svg-icons";
 import { BASE_URL } from "../../../utils/api";
 
 const Attendance = () => {
-  const webcamRef = useRef(null);
-  const [capturing, setCapturing] = useState(false);
-  const [response, setResponse] = useState(null);
   const [error, setError] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const { user, authToken } = useAuth();
-  const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [attendanceStats, setAttendanceStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [ipAddress, setIpAddress] = useState("");
   const [ipError, setIpError] = useState("");
-  console.log("user", user);
-  const videoConstraints = {
-    width: 480,
-    height: 360,
-    facingMode: "user",
-  };
 
   useEffect(() => {
     fetchAttendanceHistory();
@@ -101,87 +87,8 @@ const Attendance = () => {
     if (!validateIpAddress(ipAddress)) {
       return;
     }
-    setIsWebcamActive(true);
-    // Automatically start capturing 3s after webcam is activated
-    setTimeout(() => {
-      captureImage();
-    }, 3000);
-  };
-
-  const captureImage = async () => {
-    if (!webcamRef?.current) return;
-
-    const imageSrc = webcamRef.current.getScreenshot();
-
-    if (!imageSrc) {
-      Swal.fire({
-        icon: "error",
-        title: "Capture Failed",
-        text: "Could not capture image.",
-      });
-      return;
-    }
-
-    setCapturing(true);
-    try {
-      const blob = await fetch(imageSrc).then((res) => res.blob());
-      const formData = new FormData();
-      formData.append("image", blob, "photo.jpg");
-
-      const res = await fetch(`http://${ipAddress}:5000/recognize`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const contentType = res.headers.get("content-type");
-
-      if (res.ok || res.status === 200) {
-        if (res.status === 400) {
-          Swal.fire({
-            icon: "error",
-            title: "Face Not Found",
-            text: "Please ensure your face is clearly visible in the frame.",
-          });
-        }
-      }
-
-      if (res.status === 400) {
-        const errorData = await res.json();
-        Swal.fire({
-          icon: "error",
-          title: "No face Detected",
-          text: `Please ensure your face is clearly visible in the frame.`,
-        });
-        return;
-      }
-
-      const data = await res.json();
-      setResponse(data);
-
-      // ✅ Success alert
-      console.log("NAME", user?.name);
-      if (data?.label !== "unknown" && data?.confidence >= 0.95) {
-        Swal.fire({
-          icon: "success",
-          title: "Verification Successful",
-          text: `${data?.message}`,
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Unrecognized Face",
-          text: "Please try again or contact college admin if you belive it's a mistake.",
-        });
-      }
-    } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Connection Error",
-        text: "Could not connect to the attendance server. Please try again.",
-      });
-    } finally {
-      setCapturing(false);
-    }
+    // Open attendance page in new tab
+    window.open(`http://${ipAddress}:5000`, '_blank');
   };
 
   const calculateCourseStats = (course) => {
@@ -222,15 +129,12 @@ const Attendance = () => {
                 Attendance System
               </Typography>
               <Box sx={{ textAlign: "center", mt: 2 }}>
-                <Typography variant="h6" gutterBottom startIcon={<FontAwesomeIcon icon={faCamera} />}>
+                <Typography variant="h6" gutterBottom>
                   Take Attendance
                 </Typography>
                 <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
                   <Typography variant="subtitle1" color="primary" gutterBottom>
                     Important Instructions:
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" paragraph>
-                    • Position yourself in a well-lit area and ensure your face is clearly visible in the camera frame
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
                     • Connect to the designated hall WiFi network before proceeding with attendance
@@ -251,8 +155,7 @@ const Attendance = () => {
                   placeholder="e.g., 192.168.1.17"
                   sx={{ mb: 2 }}
                 />
-              </Box>
-              {!isWebcamActive ? (
+
                 <Button
                   variant="contained"
                   color="primary"
@@ -261,78 +164,9 @@ const Attendance = () => {
                   sx={{ mb: 2 }}
                   disabled={!ipAddress}
                 >
-                  Take Attendance
+                  Open Attendance Page
                 </Button>
-              ) : (
-                <>
-                  <div
-                    style={{
-                      position: "relative",
-                      width: 480,
-                      height: 360,
-                      margin: "auto",
-                    }}
-                  >
-                    <Webcam
-                      audio={false}
-                      ref={webcamRef}
-                      screenshotFormat="image/jpeg"
-                      videoConstraints={videoConstraints}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        borderRadius: 10,
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        borderRadius: 10,
-                        backgroundColor: "rgba(0,0,0,0.6)",
-                        boxSizing: "border-box",
-                        pointerEvents: "none",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        maskImage:
-                          "radial-gradient(circle at center, transparent 130px, black 130px)",
-                        WebkitMaskImage:
-                          "radial-gradient(circle at center, transparent 130px, black 130px)",
-                      }}
-                    ></div>
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        width: 260,
-                        height: 260,
-                        border: "2px dashed #fff",
-                        borderRadius: "50%",
-                        pointerEvents: "none",
-                      }}
-                    ></div>
-                  </div>
-
-                  {capturing ? (
-                    <CircularProgress sx={{ mt: 2 }} />
-                  ) : (
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      sx={{ mt: 2 }}
-                      onClick={captureImage}
-                    >
-                      Retry Capture
-                    </Button>
-                  )}
-                </>
-              )}
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -349,7 +183,6 @@ const Attendance = () => {
                 </Box>
               ) : attendanceStats?.data ? (
                 <>
-
                   <Divider sx={{ my: 2 }} />
 
                   {attendanceStats.data.courses.map((course) => {
@@ -418,14 +251,6 @@ const Attendance = () => {
           </Card>
         </Grid>
       </Grid>
-
-      {/* {response && (
-        <Alert sx={{ mt: 3 }} severity="success">
-          {`Welcome, ${response.label} (Confidence: ${(
-            response.confidence * 100
-          ).toFixed(2)}%)`}
-        </Alert>
-      )} */}
 
       <Snackbar
         open={openSnackbar}
