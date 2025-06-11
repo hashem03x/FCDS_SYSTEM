@@ -50,8 +50,20 @@ const departments = [
 ];
 
 const academicLevels = ["First", "Second", "Third", "Fourth"];
-const examTypes = ["Final", "Midterm", "Quiz", "Assignment"];
+const examTypes = ["Final", "Midterm"];
 const today = new Date().toISOString().split("T")[0];
+
+const getCurrentTerm = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  return now.getMonth() >= 8 ? `Fall ${year}` : `Spring ${year}`;
+};
+
+const getNextTerm = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  return now.getMonth() >= 8 ? `Spring ${year + 1}` : `Fall ${year}`;
+};
 
 const initialFormState = {
   examId: "",
@@ -62,9 +74,8 @@ const initialFormState = {
   endTime: "",
   roomNumbers: [],
   roomCapacity: 100,
-  semester: "",
+  semester: getCurrentTerm(),
   examType: "",
-  academicLevel: "",
   department: "",
 };
 
@@ -116,7 +127,6 @@ export default function Exams() {
       "roomNumbers",
       "semester",
       "examType",
-      "academicLevel",
       "department",
     ];
     const missing = required.filter((field) => !data[field]);
@@ -337,7 +347,6 @@ export default function Exams() {
             </Typography>
           </Box>
 
-
           <Card
             elevation={2}
             sx={{
@@ -398,8 +407,7 @@ export default function Exams() {
                                 key={index}
                                 label={room}
                                 size="small"
-                                
-                                sx={{ mr: 0.5 , mb: 0.8 }}
+                                sx={{ mr: 0.5, mb: 0.8 }}
                               />
                             ))}
                           </TableCell>
@@ -556,12 +564,16 @@ export default function Exams() {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
+                select
                 label="Semester"
                 fullWidth
                 name="semester"
                 value={formData.semester}
                 onChange={handleChange}
-              />
+              >
+                <MenuItem value={getCurrentTerm()}>{getCurrentTerm()}</MenuItem>
+                <MenuItem value={getNextTerm()}>{getNextTerm()}</MenuItem>
+              </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -575,22 +587,6 @@ export default function Exams() {
                 {examTypes.map((type) => (
                   <MenuItem key={type} value={type}>
                     {type}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                select
-                label="Academic Level"
-                fullWidth
-                name="academicLevel"
-                value={formData.academicLevel}
-                onChange={handleChange}
-              >
-                {academicLevels.map((level) => (
-                  <MenuItem key={level} value={level}>
-                    {level}
                   </MenuItem>
                 ))}
               </TextField>
