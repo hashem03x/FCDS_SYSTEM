@@ -21,6 +21,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  TextField,
 } from "@mui/material";
 import Webcam from "react-webcam";
 import axios from "axios";
@@ -47,6 +48,8 @@ const Attendance = () => {
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [attendanceStats, setAttendanceStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [ipAddress, setIpAddress] = useState("");
+  const [ipError, setIpError] = useState("");
   console.log("user", user);
   const videoConstraints = {
     width: 480,
@@ -75,7 +78,29 @@ const Attendance = () => {
     }
   };
 
+  const validateIpAddress = (ip) => {
+    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (!ipPattern.test(ip)) {
+      setIpError("Please enter a valid IP address (e.g., 192.168.1.17)");
+      return false;
+    }
+    const parts = ip.split('.');
+    const isValid = parts.every(part => {
+      const num = parseInt(part);
+      return num >= 0 && num <= 255;
+    });
+    if (!isValid) {
+      setIpError("Each number in the IP address must be between 0 and 255");
+      return false;
+    }
+    setIpError("");
+    return true;
+  };
+
   const startAttendance = () => {
+    if (!validateIpAddress(ipAddress)) {
+      return;
+    }
     setIsWebcamActive(true);
     // Automatically start capturing 3s after webcam is activated
     setTimeout(() => {
@@ -103,7 +128,7 @@ const Attendance = () => {
       const formData = new FormData();
       formData.append("image", blob, "photo.jpg");
 
-      const res = await fetch("http://127.0.0.1:5000/recognize", {
+      const res = await fetch(`http://${ipAddress}:5000/recognize`, {
         method: "POST",
         body: formData,
       });
@@ -207,11 +232,25 @@ const Attendance = () => {
                   <Typography variant="body2" color="text.secondary" paragraph>
                     • Position yourself in a well-lit area and ensure your face is clearly visible in the camera frame
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" paragraph>
                     • Connect to the designated hall WiFi network before proceeding with attendance
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    • Enter the server IP address provided by your instructor
                   </Typography>
                 </Box>
 
+                <TextField
+                  fullWidth
+                  label="Server IP Address"
+                  variant="outlined"
+                  value={ipAddress}
+                  onChange={(e) => setIpAddress(e.target.value)}
+                  error={!!ipError}
+                  helperText={ipError}
+                  placeholder="e.g., 192.168.1.17"
+                  sx={{ mb: 2 }}
+                />
               </Box>
               {!isWebcamActive ? (
                 <Button
@@ -220,6 +259,7 @@ const Attendance = () => {
                   size="large"
                   onClick={startAttendance}
                   sx={{ mb: 2 }}
+                  disabled={!ipAddress}
                 >
                   Take Attendance
                 </Button>

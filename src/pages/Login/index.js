@@ -165,7 +165,7 @@ function Login() {
                 disabled={isDisabled || isLoading}
               >
                 {isLoading ? (
-                  <CircularProgress size={24} color="inherit" />
+                  <CircularProgress size={24} color="inherit"/>
                 ) : (
                   "Login"
                 )}

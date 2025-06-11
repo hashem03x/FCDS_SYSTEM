@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Box,
   Typography,
@@ -10,10 +9,10 @@ import {
   CardContent,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-
+import { useAuth } from "../../../context/AuthContext";
 const Dashboard = () => {
   const navigate = useNavigate();
-
+  const {user} = useAuth()
   const pages = [
     { label: "Users", path: "/admin/users" },
     { label: "Courses", path: "/admin/courses" },
@@ -40,7 +39,7 @@ const Dashboard = () => {
 
       <Box sx={{ p: 4 }}>
         <Typography variant="h4" gutterBottom>
-          Welcome, Admin 🎉
+          Welcome, {user?.name}
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" mb={4}>
           Choose a section to manage:
