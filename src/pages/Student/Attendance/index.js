@@ -35,188 +35,228 @@ import { BASE_URL } from "../../../utils/api";
 
 const ATTENDANCE_HTML = `
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
             background-color: #f5f5f5;
+            padding: 1rem;
         }
         .container {
-            max-width: 800px;
+            text-align: center;
+            background-color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             width: 100%;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 480px;
         }
-        .video-container {
-            width: 100%;
-            max-width: 640px;
-            margin: 20px auto;
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        #video-container {
             position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: auto;
+            aspect-ratio: 4/3;
+            margin: 0 auto;
         }
         #video {
             width: 100%;
-            border-radius: 8px;
+            height: 100%;
+            border-radius: 10px;
+            object-fit: cover;
         }
-        #canvas {
-            display: none;
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            background-color: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
         }
-        .button-container {
-            text-align: center;
-            margin: 20px 0;
+        #face-guide {
+            width: 70%;
+            height: 70%;
+            border: 2px dashed #fff;
+            border-radius: 50%;
         }
         button {
-            background-color: #1976d2;
+            background-color: #4CAF50;
             color: white;
+            padding: 12px 24px;
             border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #1565c0;
+            margin-top: 1rem;
+            width: 100%;
+            max-width: 300px;
         }
         button:disabled {
-            background-color: #ccc;
+            background-color: #cccccc;
             cursor: not-allowed;
         }
         #status {
-            margin-top: 20px;
+            margin-top: 1rem;
             padding: 10px;
-            border-radius: 4px;
-            text-align: center;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
         }
         .success {
-            background-color: #e8f5e9;
-            color: #2e7d32;
+            background-color: #dff0d8;
+            color: #3c763d;
         }
         .error {
-            background-color: #ffebee;
-            color: #c62828;
+            background-color: #f2dede;
+            color: #a94442;
         }
         #camera-error {
-            color: #c62828;
-            text-align: center;
-            margin: 20px 0;
-            padding: 10px;
-            background-color: #ffebee;
-            border-radius: 4px;
             display: none;
+            color: #a94442;
+            margin-top: 1rem;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f2dede;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Attendance System</h1>
-        <div id="camera-error">
-            Please allow camera access to take attendance.
-            <br>
-            If you've denied access, please refresh the page and try again.
-        </div>
-        <div class="video-container">
+        <div id="video-container">
             <video id="video" autoplay playsinline></video>
-            <canvas id="canvas"></canvas>
+            <div id="overlay">
+                <div id="face-guide"></div>
+            </div>
         </div>
-        <div class="button-container">
-            <button id="captureBtn" disabled>Take Attendance</button>
-        </div>
+        <div id="camera-error"></div>
+        <button id="capture" onclick="captureImage()">Take Attendance</button>
         <div id="status"></div>
     </div>
 
     <script>
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const captureBtn = document.getElementById('captureBtn');
-        const status = document.getElementById('status');
+        const captureButton = document.getElementById('capture');
+        const statusDiv = document.getElementById('status');
         const cameraError = document.getElementById('camera-error');
+        let stream = null;
 
-        // Check if browser supports getUserMedia
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            cameraError.style.display = 'block';
-            cameraError.textContent = 'Your browser does not support camera access. Please use a modern browser.';
-            return;
-        }
-
-        // Set up camera
         async function setupCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
+                const constraints = {
                     video: {
-                        facingMode: 'user',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        width: { min: 640, ideal: 1280, max: 1920 },
+                        height: { min: 480, ideal: 720, max: 1080 },
+                        facingMode: { ideal: 'user' },
+                        aspectRatio: { ideal: 1.333333 }
                     }
-                });
+                };
+
+                // Try to get the camera stream
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
-                captureBtn.disabled = false;
                 cameraError.style.display = 'none';
             } catch (err) {
-                console.error('Error accessing camera:', err);
-                cameraError.style.display = 'block';
-                captureBtn.disabled = true;
+                console.error('Camera error:', err);
+                // Try fallback with minimal constraints if the first attempt fails
+                try {
+                    const fallbackConstraints = {
+                        video: true
+                    };
+                    stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+                    video.srcObject = stream;
+                    cameraError.style.display = 'none';
+                } catch (fallbackErr) {
+                    console.error('Fallback camera error:', fallbackErr);
+                    cameraError.textContent = 'Error accessing camera: ' + fallbackErr.message + '. Please ensure camera permissions are granted and try again.';
+                    cameraError.style.display = 'block';
+                    captureButton.disabled = true;
+                }
             }
         }
 
-        // Capture image and send to server
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+        }
+
         async function captureImage() {
+            if (!stream) {
+                showStatus('Camera not initialized', 'error');
+                return;
+            }
+
+            captureButton.disabled = true;
+            showStatus('Processing...', '');
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
             try {
-                captureBtn.disabled = true;
-                status.textContent = 'Processing...';
-                status.className = '';
-
-                // Set canvas dimensions to match video
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                
-                // Draw video frame to canvas
-                const context = canvas.getContext('2d');
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                // Convert canvas to blob
                 const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
-                
-                // Create form data
                 const formData = new FormData();
-                formData.append('image', blob, 'attendance.jpg');
+                formData.append('image', blob, 'photo.jpg');
 
-                // Send to server
                 const response = await fetch('http://localhost:5000/recognize', {
                     method: 'POST',
                     body: formData
                 });
 
-                const result = await response.json();
-
-                if (result.success) {
-                    status.textContent = 'Attendance marked successfully!';
-                    status.className = 'success';
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.label === 'unknown') {
+                        showStatus('Face not recognized. Please try again.', 'error');
+                    } else {
+                        showStatus(data.message, 'success');
+                    }
                 } else {
-                    throw new Error(result.message || 'Failed to mark attendance');
+                    showStatus(data.error || 'Error processing image', 'error');
                 }
             } catch (err) {
-                console.error('Error:', err);
-                status.textContent = err.message || 'Failed to mark attendance';
-                status.className = 'error';
+                showStatus('Error: ' + err.message, 'error');
             } finally {
-                captureBtn.disabled = false;
+                captureButton.disabled = false;
             }
         }
 
-        // Initialize
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+            } else {
+                setupCamera();
+            }
+        });
+
+        // Initialize camera when page loads
         setupCamera();
-        captureBtn.addEventListener('click', captureImage);
     </script>
 </body>
 </html>
@@ -253,41 +293,48 @@ const Attendance = () => {
   const startAttendance = () => {
     try {
       // Create a blob from the HTML content
-      const blob = new Blob([ATTENDANCE_HTML], { type: 'text/html' });
+      const blob = new Blob([ATTENDANCE_HTML], { type: "text/html" });
       const url = window.URL.createObjectURL(blob);
 
       // Create a temporary link element
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = 'attendance.html';
-      
+      link.download = "attendance.html";
+
       // Append to body, click, and remove
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up the URL object
       window.URL.revokeObjectURL(url);
 
       // Open the downloaded file
-      window.open('file:///storage/Downloads/attendance.html', '_blank');
+      window.open("file:///storage/Downloads/attendance.html", "_blank");
     } catch (error) {
-      setError('Failed to download attendance page');
+      setError("Failed to download attendance page");
       setOpenSnackbar(true);
-      console.error('Error:', error);
+      console.error("Error:", error);
     }
   };
 
   const calculateCourseStats = (course) => {
-    const totalLectures = course.attendedLectures.length + course.missedLectures.length;
+    const totalLectures =
+      course.attendedLectures.length + course.missedLectures.length;
     const totalSections = course.sections.reduce(
-      (acc, section) => acc + section.attendedSessions.length + section.missedSessions.length,
+      (acc, section) =>
+        acc + section.attendedSessions.length + section.missedSessions.length,
       0
     );
     const totalSessions = totalLectures + totalSections;
-    const attendedSessions = course.attendedLectures.length + 
-      course.sections.reduce((acc, section) => acc + section.attendedSessions.length, 0);
-    const attendanceRate = totalSessions > 0 ? (attendedSessions / totalSessions) * 100 : 0;
+    const attendedSessions =
+      course.attendedLectures.length +
+      course.sections.reduce(
+        (acc, section) => acc + section.attendedSessions.length,
+        0
+      );
+    const attendanceRate =
+      totalSessions > 0 ? (attendedSessions / totalSessions) * 100 : 0;
 
     return {
       totalSessions,
@@ -298,11 +345,11 @@ const Attendance = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -319,12 +366,20 @@ const Attendance = () => {
                 <Typography variant="h6" gutterBottom>
                   Take Attendance
                 </Typography>
-                <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+                <Box
+                  sx={{
+                    mb: 3,
+                    p: 2,
+                    bgcolor: "background.paper",
+                    borderRadius: 1,
+                  }}
+                >
                   <Typography variant="subtitle1" color="primary" gutterBottom>
                     Important Instructions:
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    • Connect to the designated hall WiFi network before proceeding with attendance
+                    • Connect to the designated hall WiFi network before
+                    proceeding with attendance
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     • Click the button below to open the attendance page
@@ -352,7 +407,12 @@ const Attendance = () => {
                 Attendance Stats
               </Typography>
               {loading ? (
-                <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  minHeight={200}
+                >
                   <CircularProgress />
                 </Box>
               ) : attendanceStats?.data ? (
@@ -366,7 +426,7 @@ const Attendance = () => {
                         <AccordionSummary
                           expandIcon={<FontAwesomeIcon icon={faChevronDown} />}
                         >
-                          <Box sx={{ width: '100%' }}>
+                          <Box sx={{ width: "100%" }}>
                             <Typography variant="subtitle1" fontWeight="bold">
                               {course.name}
                             </Typography>
@@ -378,10 +438,12 @@ const Attendance = () => {
                         <AccordionDetails>
                           <Box sx={{ mb: 2 }}>
                             <Typography variant="body2">
-                              <strong>Total Sessions:</strong> {stats.totalSessions}
+                              <strong>Total Sessions:</strong>{" "}
+                              {stats.totalSessions}
                             </Typography>
                             <Typography variant="body2" color="success.main">
-                              <strong>Attended:</strong> {stats.attendedSessions}
+                              <strong>Attended:</strong>{" "}
+                              {stats.attendedSessions}
                             </Typography>
                             <Typography variant="body2" color="error.main">
                               <strong>Missed:</strong> {stats.missedSessions}
@@ -401,13 +463,17 @@ const Attendance = () => {
                                 </TableRow>
                               </TableHead>
                               <TableBody>
-                                {course.missedLectures.slice(0, 3).map((lecture, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell>{formatDate(lecture.date)}</TableCell>
-                                    <TableCell>{lecture.time}</TableCell>
-                                    <TableCell>{lecture.room}</TableCell>
-                                  </TableRow>
-                                ))}
+                                {course.missedLectures
+                                  .slice(0, 3)
+                                  .map((lecture, index) => (
+                                    <TableRow key={index}>
+                                      <TableCell>
+                                        {formatDate(lecture.date)}
+                                      </TableCell>
+                                      <TableCell>{lecture.time}</TableCell>
+                                      <TableCell>{lecture.room}</TableCell>
+                                    </TableRow>
+                                  ))}
                               </TableBody>
                             </Table>
                           </TableContainer>
@@ -467,3 +533,4 @@ export async function encryptNumber(number, keyString) {
 
   return btoa(String.fromCharCode(...encryptedBytes));
 }
+
