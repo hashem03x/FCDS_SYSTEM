@@ -1,17 +1,17 @@
 {
   "files": {
     "main.css": "/FCDS_SYSTEM/static/css/main.75105292.css",
-    "main.js": "/FCDS_SYSTEM/static/js/main.e1b28445.js",
+    "main.js": "/FCDS_SYSTEM/static/js/main.933d4f3b.js",
     "static/media/login_image.png": "/FCDS_SYSTEM/static/media/login_image.63784a023e3c11b54ea2.png",
     "static/media/logo.png": "/FCDS_SYSTEM/static/media/logo.1135fc803f89b6c1b356.png",
     "static/media/login_bg_shapes.png": "/FCDS_SYSTEM/static/media/login_bg_shapes.e158bfffc2fe7accda9d.png",
     "static/media/FCDS.png": "/FCDS_SYSTEM/static/media/FCDS.517fc45c3c13999a996b.png",
     "index.html": "/FCDS_SYSTEM/index.html",
     "main.75105292.css.map": "/FCDS_SYSTEM/static/css/main.75105292.css.map",
-    "main.e1b28445.js.map": "/FCDS_SYSTEM/static/js/main.e1b28445.js.map"
+    "main.933d4f3b.js.map": "/FCDS_SYSTEM/static/js/main.933d4f3b.js.map"
   },
   "entrypoints": [
     "static/css/main.75105292.css",
-    "static/js/main.e1b28445.js"
+    "static/js/main.933d4f3b.js"
   ]
 }
