@@ -33,6 +33,195 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { BASE_URL } from "../../../utils/api";
 
+const ATTENDANCE_HTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .video-container {
+            width: 100%;
+            max-width: 640px;
+            margin: 20px auto;
+            position: relative;
+        }
+        #video {
+            width: 100%;
+            border-radius: 8px;
+        }
+        #canvas {
+            display: none;
+        }
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        #camera-error {
+            color: #c62828;
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Attendance System</h1>
+        <div id="camera-error">
+            Please allow camera access to take attendance.
+            <br>
+            If you've denied access, please refresh the page and try again.
+        </div>
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        <div class="button-container">
+            <button id="captureBtn" disabled>Take Attendance</button>
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('captureBtn');
+        const status = document.getElementById('status');
+        const cameraError = document.getElementById('camera-error');
+
+        // Check if browser supports getUserMedia
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            cameraError.style.display = 'block';
+            cameraError.textContent = 'Your browser does not support camera access. Please use a modern browser.';
+            return;
+        }
+
+        // Set up camera
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                video.srcObject = stream;
+                captureBtn.disabled = false;
+                cameraError.style.display = 'none';
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                cameraError.style.display = 'block';
+                captureBtn.disabled = true;
+            }
+        }
+
+        // Capture image and send to server
+        async function captureImage() {
+            try {
+                captureBtn.disabled = true;
+                status.textContent = 'Processing...';
+                status.className = '';
+
+                // Set canvas dimensions to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Draw video frame to canvas
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Convert canvas to blob
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('image', blob, 'attendance.jpg');
+
+                // Send to server
+                const response = await fetch('http://localhost:5000/recognize', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    status.textContent = 'Attendance marked successfully!';
+                    status.className = 'success';
+                } else {
+                    throw new Error(result.message || 'Failed to mark attendance');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                status.textContent = err.message || 'Failed to mark attendance';
+                status.className = 'error';
+            } finally {
+                captureBtn.disabled = false;
+            }
+        }
+
+        // Initialize
+        setupCamera();
+        captureBtn.addEventListener('click', captureImage);
+    </script>
+</body>
+</html>
+`;
+
 const Attendance = () => {
   const [error, setError] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -61,14 +250,10 @@ const Attendance = () => {
     }
   };
 
-  const startAttendance = async () => {
+  const startAttendance = () => {
     try {
-      // Fetch the HTML content from the server
-      const response = await fetch('http://localhost:5000');
-      const htmlContent = await response.text();
-
       // Create a blob from the HTML content
-      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const blob = new Blob([ATTENDANCE_HTML], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
 
       // Create a temporary link element
