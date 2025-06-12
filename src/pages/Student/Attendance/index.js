@@ -21,6 +21,7 @@ import {
   TableHead,
   TableRow,
   Paper,
+  TextField,
 } from "@mui/material";
 import { useAuth } from "../../../context/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -268,6 +269,7 @@ const Attendance = () => {
   const { user, authToken } = useAuth();
   const [attendanceStats, setAttendanceStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [ipAddress, setIpAddress] = useState("");
 
   useEffect(() => {
     fetchAttendanceHistory();
@@ -290,29 +292,29 @@ const Attendance = () => {
     }
   };
 
+  const validateIpAddress = (ip) => {
+    const ipPattern = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d{1,5})$/;
+    return ipPattern.test(ip);
+  };
+
   const startAttendance = () => {
+    if (!ipAddress) {
+      setError("Please enter the server IP address");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    if (!validateIpAddress(ipAddress)) {
+      setError("Please enter a valid IP address with port (e.g., 192.168.1.100:5000)");
+      setOpenSnackbar(true);
+      return;
+    }
+
     try {
-      // Create a blob from the HTML content
-      const blob = new Blob([ATTENDANCE_HTML], { type: "text/html" });
-      const url = window.URL.createObjectURL(blob);
-
-      // Create a temporary link element
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "attendance.html";
-
-      // Append to body, click, and remove
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Clean up the URL object
-      window.URL.revokeObjectURL(url);
-
-      // Open the downloaded file
-      window.open("file:///storage/Downloads/attendance.html", "_blank");
+      // Open the attendance page directly in a new tab
+      window.open(`https://${ipAddress}`, '_blank');
     } catch (error) {
-      setError("Failed to download attendance page");
+      setError("Failed to open attendance page");
       setOpenSnackbar(true);
       console.error("Error:", error);
     }
@@ -381,10 +383,28 @@ const Attendance = () => {
                     • Connect to the designated hall WiFi network before
                     proceeding with attendance
                   </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    • Enter the server IP address provided by your instructor
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
                     • Click the button below to open the attendance page
                   </Typography>
                 </Box>
+
+                <TextField
+                  fullWidth
+                  label="Server IP Address"
+                  placeholder="e.g., 192.168.1.100:5000"
+                  value={ipAddress}
+                  onChange={(e) => setIpAddress(e.target.value)}
+                  sx={{ mb: 2, maxWidth: 400 }}
+                  error={ipAddress !== "" && !validateIpAddress(ipAddress)}
+                  helperText={
+                    ipAddress !== "" && !validateIpAddress(ipAddress)
+                      ? "Please enter a valid IP address with port"
+                      : ""
+                  }
+                />
 
                 <Button
                   variant="contained"
@@ -392,6 +412,7 @@ const Attendance = () => {
                   size="large"
                   onClick={startAttendance}
                   sx={{ mb: 2 }}
+                  disabled={!validateIpAddress(ipAddress)}
                 >
                   Open Attendance Page
                 </Button>

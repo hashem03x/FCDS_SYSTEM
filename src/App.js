@@ -28,8 +28,9 @@ import StudentPerformance from "./pages/Student/StudentPerformance";
 import Registration from "./pages/Student/Registration";
 import TimeTable from "./pages/Student/TimeTable";
 import ExamsTable from "./pages/Student/Exams";
-import Settings from "./pages/Student/Settings";
 import Attendance from "./pages/Student/Attendance";
+import StudentComplaints from "./pages/Student/Complaints";
+import Profile from "./pages/Student/Profile";
 
 // Doctor Pages
 import DoctorLayout from "./pages/Doctor/DoctorLayout";
@@ -50,74 +51,87 @@ const MemoizedDoctorLayout = React.memo(DoctorLayout);
 
 const App = React.memo(() => {
   // Memoize route configurations
-  const publicRoutes = useMemo(() => (
-    <Route element={<PublicRoutes />}>
-      <Route index path="/" element={<MemoizedLogin />} />
-      <Route path="/login" element={<MemoizedLogin />} />
-    </Route>
-  ), []);
+  const publicRoutes = useMemo(
+    () => (
+      <Route element={<PublicRoutes />}>
+        <Route index path="/" element={<MemoizedLogin />} />
+        <Route path="/login" element={<MemoizedLogin />} />
+      </Route>
+    ),
+    []
+  );
 
-  const adminRoutes = useMemo(() => (
-    <Route
-      path="/admin/*"
-      element={
-        <PrivateRoutes role="admin">
-          <AdminProvider>
-            <MemoizedAdminLayout />
-          </AdminProvider>
-        </PrivateRoutes>
-      }
-    >
-      <Route index element={<AdminDashboard />} />
-      <Route path="users" element={<Users />} />
-      <Route path="courses" element={<Courses />} />
-      <Route path="sections" element={<Sections />} />
-      <Route path="complaints" element={<Complaints />} />
-      <Route path="fees" element={<Fees />} />
-      <Route path="exams" element={<Exams />} />
-      <Route path="grades" element={<Grades />} />
-      <Route path="system-settings" element={<SystemSettings />} />
-    </Route>
-  ), []);
+  const adminRoutes = useMemo(
+    () => (
+      <Route
+        path="/admin/*"
+        element={
+          <PrivateRoutes role="admin">
+            <AdminProvider>
+              <MemoizedAdminLayout />
+            </AdminProvider>
+          </PrivateRoutes>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<Users />} />
+        <Route path="courses" element={<Courses />} />
+        <Route path="sections" element={<Sections />} />
+        <Route path="complaints" element={<Complaints />} />
+        <Route path="fees" element={<Fees />} />
+        <Route path="exams" element={<Exams />} />
+        <Route path="grades" element={<Grades />} />
+        <Route path="system-settings" element={<SystemSettings />} />
+      </Route>
+    ),
+    []
+  );
 
-  const studentRoutes = useMemo(() => (
-    <Route
-      path="/student/*"
-      element={
-        <PrivateRoutes role="student">
-          <MemoizedStudentLayout />
-        </PrivateRoutes>
-      }
-    >
-      <Route index element={<StudentDashboard />} />
-      <Route path="performance" element={<StudentPerformance />} />
-      <Route path="registration" element={<Registration />} />
-      <Route path="lectures-table" element={<TimeTable />} />
-      <Route path="exams-table" element={<ExamsTable />} />
-      <Route path="settings" element={<Settings />} />
-      <Route path="attendance" element={<Attendance />} />
-    </Route>
-  ), []);
+  const studentRoutes = useMemo(
+    () => (
+      <Route
+        path="/student/*"
+        element={
+          <PrivateRoutes role="student">
+            <MemoizedStudentLayout />
+          </PrivateRoutes>
+        }
+      >
+        <Route index element={<StudentDashboard />} />
+        <Route path="performance" element={<StudentPerformance />} />
+        <Route path="registration" element={<Registration />} />
+        <Route path="lectures-table" element={<TimeTable />} />
+        <Route path="exams-table" element={<ExamsTable />} />
+        <Route path="attendance" element={<Attendance />} />
+        <Route path="complaints" element={<StudentComplaints />} />
+        <Route path="profile" element={<Profile />} />
+      </Route>
+    ),
+    []
+  );
 
-  const doctorRoutes = useMemo(() => (
-    <Route
-      path="/doctor/*"
-      element={
-        <PrivateRoutes role="doctor">
-          <DoctorProvider>
-            <MemoizedDoctorLayout />
-          </DoctorProvider>
-        </PrivateRoutes>
-      }
-    >
-      <Route index element={<DoctorDashboard />} />
-      <Route path="courses" element={<DoctorCourses />} />
-      <Route path="students" element={<DoctorStudents />} />
-      <Route path="grades" element={<DoctorGrades />} />
-      <Route path="settings" element={<DoctorSettings />} />
-      <Route path="lectures" element={<DoctorLectures />} />
-    </Route>
-  ), []);
+  const doctorRoutes = useMemo(
+    () => (
+      <Route
+        path="/doctor/*"
+        element={
+          <PrivateRoutes role="doctor">
+            <DoctorProvider>
+              <MemoizedDoctorLayout />
+            </DoctorProvider>
+          </PrivateRoutes>
+        }
+      >
+        <Route index element={<DoctorDashboard />} />
+        <Route path="courses" element={<DoctorCourses />} />
+        <Route path="students" element={<DoctorStudents />} />
+        <Route path="grades" element={<DoctorGrades />} />
+        <Route path="settings" element={<DoctorSettings />} />
+        <Route path="lectures" element={<DoctorLectures />} />
+      </Route>
+    ),
+    []
+  );
 
   return (
     <Router>

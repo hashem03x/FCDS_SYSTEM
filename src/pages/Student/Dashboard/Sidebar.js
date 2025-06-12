@@ -21,6 +21,7 @@ import {
   faHouse,
   faAnglesLeft,
   faRightFromBracket,
+  faExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ListItemIcon, Typography } from "@mui/material";
@@ -128,6 +129,16 @@ export default function MiniDrawer() {
       path: "/student/attendance",
       name: "Attendance",
       icon: faClipboardUser,
+    },
+    {
+      path: "/student/complaints",
+      name: "Complaints",
+      icon: faExclamation,
+    },
+    {
+      path: "/student/profile",
+      name: "Profile",
+      icon: faGear,
     },
   ];
 

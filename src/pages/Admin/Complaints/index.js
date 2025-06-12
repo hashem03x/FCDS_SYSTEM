@@ -21,7 +21,7 @@ import { useAuth } from "../../../context/AuthContext";
 
 const statusOptions = ["Pending", "Resolved"];
 
-export default function Complaints() {
+export default function StudentComplaints() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const { authToken } = useAuth();
