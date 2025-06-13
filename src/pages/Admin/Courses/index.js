@@ -350,12 +350,27 @@ function Courses() {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  select
                   label="Department"
                   name="department"
                   value={formData.department}
                   onChange={handleChange}
                   required
-                />
+                >
+                  {[
+                    "Administration",
+                    "Computing and Data Science",
+                    "Intelligent Systems",
+                    "Cybersecurity",
+                    "Business Analytics",
+                    "Media Analytics",
+                    "Healthcare Informatics and Data Analytics"
+                  ].map((dept) => (
+                    <MenuItem key={dept} value={dept}>
+                      {dept}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -367,8 +382,10 @@ function Courses() {
                   onChange={handleChange}
                   required
                 >
+
+                  {console.log(doctors)}
                   {doctors.map((doctor) => (
-                    <MenuItem key={doctor._id} value={doctor._id}>
+                    <MenuItem key={doctor._id} value={doctor.id}>
                       {doctor.name}
                     </MenuItem>
                   ))}
@@ -389,14 +406,19 @@ function Courses() {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  select
                   label="Semester"
                   name="semester"
-                  type="number"
                   value={formData.semester}
                   onChange={handleChange}
                   required
-                  inputProps={{ min: 1, max: 8 }}
-                />
+                >
+                  {["Fall", "Summer", "Spring"].map((semester) => (
+                    <MenuItem key={semester} value={semester}>
+                      {semester}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
