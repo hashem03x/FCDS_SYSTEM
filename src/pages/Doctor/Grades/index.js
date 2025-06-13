@@ -51,7 +51,20 @@ function Grades() {
   const [gradeData, setGradeData] = useState({
     studentId: "",
     courseCode: "",
-    score: "",
+    components: {
+      midterm: {
+        score: "",
+        maxScore: 20
+      },
+      work: {
+        score: "",
+        maxScore: 30
+      },
+      final: {
+        score: "",
+        maxScore: 50
+      }
+    }
   });
   const [uploading, setUploading] = useState(false);
   const [courseGrades, setCourseGrades] = useState([]);
@@ -65,18 +78,18 @@ function Grades() {
   const calculateStats = () => {
     if (!courseGrades.length) return null;
 
-    const sortedGrades = [...courseGrades].sort((a, b) => b.score - a.score);
+    const sortedGrades = [...courseGrades].sort((a, b) => b.totalScore - a.totalScore);
     const highestGrades = sortedGrades.slice(0, 3);
     const lowestGrades = sortedGrades.slice(-3).reverse();
 
     const average =
-      courseGrades.reduce((acc, grade) => acc + grade.score, 0) /
+      courseGrades.reduce((acc, grade) => acc + grade.totalScore, 0) /
       courseGrades.length;
     const passingCount = courseGrades.filter(
-      (grade) => grade.score >= 60
+      (grade) => grade.totalScore >= 60
     ).length;
     const failingCount = courseGrades.filter(
-      (grade) => grade.score < 60
+      (grade) => grade.totalScore < 60
     ).length;
 
     return {
@@ -113,7 +126,7 @@ function Grades() {
       try {
         setLoadingGrades(true);
         const response = await fetch(
-          `${BASE_URL}/api/gpa/get-grades-for-course/${courseCode}`,
+          `${BASE_URL}/api/gpa/courses/${courseCode}/grades`,
           {
             method: "GET",
             headers: {
@@ -126,9 +139,12 @@ function Grades() {
           throw new Error("Failed to fetch grades");
         }
 
-        const data = await response.json();
-        // Handle array response directly
-        setCourseGrades(Array.isArray(data) ? data : []);
+        const result = await response.json();
+        if (result.success) {
+          setCourseGrades(result.data || []);
+        } else {
+          throw new Error(result.message || "Failed to fetch grades");
+        }
       } catch (error) {
         setGradesError(error.message || "Failed to fetch grades");
         Swal.fire("Error", error.message || "Failed to fetch grades", "error");
@@ -142,7 +158,20 @@ function Grades() {
     setGradeData({
       studentId: "",
       courseCode: selectedCourse,
-      score: "",
+      components: {
+        midterm: {
+          score: "",
+          maxScore: 20
+        },
+        work: {
+          score: "",
+          maxScore: 30
+        },
+        final: {
+          score: "",
+          maxScore: 50
+        }
+      }
     });
     setOpenModal(true);
   };
@@ -153,9 +182,17 @@ function Grades() {
 
   const handleGradeChange = (e) => {
     const { name, value } = e.target;
+    const [component, field] = name.split('.');
+    
     setGradeData((prev) => ({
       ...prev,
-      [name]: value,
+      components: {
+        ...prev.components,
+        [component]: {
+          ...prev.components[component],
+          [field]: value
+        }
+      }
     }));
   };
 
@@ -163,7 +200,20 @@ function Grades() {
     setGradeData({
       studentId: grade.studentId,
       courseCode: grade.courseCode,
-      score: grade.score.toString(),
+      components: {
+        midterm: {
+          score: grade.components.midterm.score.toString(),
+          maxScore: grade.components.midterm.maxScore
+        },
+        work: {
+          score: grade.components.work.score.toString(),
+          maxScore: grade.components.work.maxScore
+        },
+        final: {
+          score: grade.components.final.score.toString(),
+          maxScore: grade.components.final.maxScore
+        }
+      }
     });
     setIsEditing(true);
     setOpenModal(true);
@@ -207,15 +257,19 @@ function Grades() {
 
   const handleSubmitGrade = async () => {
     try {
-      if (!gradeData.studentId || !gradeData.courseCode || !gradeData.score) {
-        Swal.fire("Error", "Please fill in all fields", "error");
+      if (!gradeData.studentId || !gradeData.courseCode) {
+        Swal.fire("Error", "Please fill in all required fields", "error");
         return;
       }
 
-      const score = parseFloat(gradeData.score);
-      if (isNaN(score) || score < 0 || score > 100) {
-        Swal.fire("Error", "Score must be between 0 and 100", "error");
-        return;
+      // Validate component scores
+      const components = gradeData.components;
+      for (const [component, data] of Object.entries(components)) {
+        const score = parseFloat(data.score);
+        if (isNaN(score) || score < 0 || score > data.maxScore) {
+          Swal.fire("Error", `${component} score must be between 0 and ${data.maxScore}`, "error");
+          return;
+        }
       }
 
       const url = isEditing
@@ -228,11 +282,7 @@ function Grades() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({
-          studentId: gradeData.studentId,
-          courseCode: gradeData.courseCode,
-          score: score,
-        }),
+        body: JSON.stringify(gradeData),
       });
 
       if (!response.ok) {
@@ -249,11 +299,7 @@ function Grades() {
       // Refresh grades after adding/updating grade
       handleCourseChange({ target: { value: selectedCourse } });
     } catch (error) {
-      Swal.fire(
-        "Error",
-        error.message || "Failed to add/update grade",
-        "error"
-      );
+      Swal.fire("Error", error.message || "Failed to add/update grade", "error");
     }
   };
 
@@ -408,7 +454,7 @@ function Grades() {
                     {stats.highestGrades.map((grade, index) => (
                       <Box key={grade._id} mb={1}>
                         <Typography variant="body2">
-                          {index + 1}. {grade.studentId} - {grade.score} (
+                          {index + 1}. {grade.studentId} - {grade.totalScore} (
                           {grade.grade})
                         </Typography>
                       </Box>
@@ -454,7 +500,7 @@ function Grades() {
                     {stats.lowestGrades.map((grade, index) => (
                       <Box key={grade._id} mb={1}>
                         <Typography variant="body2">
-                          {index + 1}. {grade.studentId} - {grade.score} (
+                          {index + 1}. {grade.studentId} - {grade.totalScore} (
                           {grade.grade})
                         </Typography>
                       </Box>
@@ -487,143 +533,169 @@ function Grades() {
           <Typography variant="h6" mb={2}>
             Course Grades
           </Typography>
-          {loadingGrades ? (
-            <Box display="flex" justifyContent="center" p={3}>
-              <CircularProgress />
-            </Box>
-          ) : gradesError ? (
-            <Alert severity="error">{gradesError}</Alert>
-          ) : (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Student ID</TableCell>
+                  <TableCell>Course Code</TableCell>
+                  <TableCell>Course Name</TableCell>
+                  <TableCell>Midterm</TableCell>
+                  <TableCell>Work</TableCell>
+                  <TableCell>Final</TableCell>
+                  <TableCell>Total Score</TableCell>
+                  <TableCell>Grade</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loadingGrades ? (
                   <TableRow>
-                    <TableCell>Student ID</TableCell>
-                    <TableCell>Student Name</TableCell>
-                    <TableCell>Score</TableCell>
-                    <TableCell>Grade</TableCell>
-                    <TableCell>Term</TableCell>
-                    <TableCell>Actions</TableCell>
+                    <TableCell colSpan={9} align="center">
+                      <CircularProgress />
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredGrades.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        {searchQuery
-                          ? "No matching students found"
-                          : "No grades found for this course"}
+                ) : gradesError ? (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center">
+                      <Alert severity="error">{gradesError}</Alert>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredGrades.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center">
+                      No grades found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredGrades.map((grade) => (
+                    <TableRow key={`${grade.studentId}-${grade.courseCode}`}>
+                      <TableCell>{grade.studentId}</TableCell>
+                      <TableCell>{grade.courseCode}</TableCell>
+                      <TableCell>{grade.courseName}</TableCell>
+                      <TableCell>
+                        {grade.components.midterm.score}/{grade.components.midterm.maxScore}
+                      </TableCell>
+                      <TableCell>
+                        {grade.components.work.score}/{grade.components.work.maxScore}
+                      </TableCell>
+                      <TableCell>
+                        {grade.components.final.score}/{grade.components.final.maxScore}
+                      </TableCell>
+                      <TableCell>{grade.totalScore}</TableCell>
+                      <TableCell>{grade.grade}</TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={1}>
+                          <Tooltip title="Edit Grade">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditGrade(grade)}
+                              color="primary"
+                            >
+                              <FontAwesomeIcon icon={faPenToSquare} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete Grade">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteGrade(grade.studentId, grade.courseCode)}
+                              color="error"
+                            >
+                              <FontAwesomeIcon icon={faTrash} />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    filteredGrades.map((grade) => (
-                      <TableRow key={grade._id}>
-                        <TableCell>{grade.studentId}</TableCell>
-                        <TableCell>{grade.studentName}</TableCell>
-                        <TableCell>{grade.score}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={grade.grade}
-                            color={
-                              grade.grade === "A"
-                                ? "success"
-                                : grade.grade === "B"
-                                ? "primary"
-                                : grade.grade === "C"
-                                ? "info"
-                                : grade.grade === "D"
-                                ? "warning"
-                                : "error"
-                            }
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell>{grade.term}</TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={1}>
-                            <Tooltip title="Edit Grade">
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => handleEditGrade(grade)}
-                              >
-                                <FontAwesomeIcon icon={faPenToSquare} />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete Grade">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() =>
-                                  handleDeleteGrade(
-                                    grade.studentId,
-                                    grade.courseCode
-                                  )
-                                }
-                              >
-                                <FontAwesomeIcon icon={faTrash} />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </>
       )}
 
-      <Dialog open={openModal} onClose={handleCloseModal}>
-        <DialogTitle>{isEditing ? "Edit Grade" : "Add Grade"}</DialogTitle>
+      <Dialog open={openModal} onClose={handleCloseModal} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {isEditing ? "Edit Grade" : "Add New Grade"}
+        </DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-            <TextField
-              label="Student ID"
-              name="studentId"
-              value={gradeData.studentId}
-              onChange={handleGradeChange}
-              fullWidth
-              required
-              disabled={isEditing}
-            />
-            <TextField
-              label="Course Code"
-              name="courseCode"
-              value={gradeData.courseCode}
-              disabled
-              fullWidth
-            />
-            <TextField
-              label="Score"
-              name="score"
-              type="number"
-              value={gradeData.score}
-              onChange={handleGradeChange}
-              fullWidth
-              required
-              inputProps={{ min: 0, max: 100 }}
-              helperText="Enter a score between 0 and 100"
-            />
+          <Box component="form" sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Student ID"
+                  name="studentId"
+                  value={gradeData.studentId}
+                  onChange={(e) => setGradeData(prev => ({ ...prev, studentId: e.target.value }))}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Course Code"
+                  name="courseCode"
+                  value={gradeData.courseCode}
+                  disabled
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>Component Scores</Typography>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Midterm Score"
+                  name="midterm.score"
+                  type="number"
+                  value={gradeData.components.midterm.score}
+                  onChange={handleGradeChange}
+                  required
+                  inputProps={{ min: 0, max: gradeData.components.midterm.maxScore }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">/ {gradeData.components.midterm.maxScore}</InputAdornment>,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Work Score"
+                  name="work.score"
+                  type="number"
+                  value={gradeData.components.work.score}
+                  onChange={handleGradeChange}
+                  required
+                  inputProps={{ min: 0, max: gradeData.components.work.maxScore }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">/ {gradeData.components.work.maxScore}</InputAdornment>,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Final Score"
+                  name="final.score"
+                  type="number"
+                  value={gradeData.components.final.score}
+                  onChange={handleGradeChange}
+                  required
+                  inputProps={{ min: 0, max: gradeData.components.final.maxScore }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">/ {gradeData.components.final.maxScore}</InputAdornment>,
+                  }}
+                />
+              </Grid>
+            </Grid>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => {
-              handleCloseModal();
-              setIsEditing(false);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmitGrade}
-            variant="contained"
-            color="primary"
-          >
-            {isEditing ? "Update" : "Submit"}
+          <Button onClick={handleCloseModal}>Cancel</Button>
+          <Button onClick={handleSubmitGrade} variant="contained" color="primary">
+            {isEditing ? "Update" : "Add"}
           </Button>
         </DialogActions>
       </Dialog>
