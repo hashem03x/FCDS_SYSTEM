@@ -92,7 +92,7 @@ const Profile = () => {
     try {
       setIsUpdating(true);
       const formData = new FormData();
-      formData.append("profilePicture", selectedFile);
+      formData.append("image", selectedFile);
 
       const response = await fetch(
         `${BASE_URL}/api/auth/update-profile-picture/${user.id}`,

@@ -1,157 +1,154 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Container,
-  Typography,
-  Paper,
   Box,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-  Chip,
-  MenuItem,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   Select,
+  MenuItem,
   FormControl,
-  InputLabel,
+  Alert,
   CircularProgress,
-  Stack,
 } from "@mui/material";
-import { BASE_URL } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
+import { BASE_URL } from "../../../utils/api";
+import Swal from "sweetalert2";
 
-const statusOptions = ["Pending", "Resolved"];
-
-export default function StudentComplaints() {
+export default function Complaints() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { authToken } = useAuth();
-
-  const fetchComplaints = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${BASE_URL}/api/complaint/get-complaints`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-
-      const data = await response.json();
-      setComplaints(data);
-    } catch (err) {
-      console.error("Error fetching complaints:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [authToken]);
 
   useEffect(() => {
     fetchComplaints();
-  }, [fetchComplaints]);
+  }, []);
 
-  const handleStatusChange = async (id, newStatus) => {
+  const fetchComplaints = async () => {
     try {
-      const response = await fetch(`${BASE_URL}/api/complaint/resolve/${id}`, {
-        method: "PUT",
+      const response = await fetch(`${BASE_URL}/api/complaint/get-complaints`, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ status: newStatus.toLowerCase() }),
       });
-
-      if (response.ok) {
-        await fetchComplaints(); // Refresh data
+      const data = await response.json();
+      if (data) {
+        console.log(data);
+        setComplaints(data);
       } else {
-        console.error("Failed to update status");
+        throw new Error(data.message || "Failed to fetch complaints");
       }
     } catch (err) {
-      console.error("Error updating status:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleStatusChange = async (complaintId, newStatus) => {
+    try {
+      const response = await fetch(
+        `${BASE_URL}/api/complaint/resolve/${complaintId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            status: newStatus,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.message.includes("successfully")) {
+        Swal.fire({
+          title: "Success!",
+          text: "Complaint status updated successfully",
+          icon: "success",
+        });
+        fetchComplaints();
+      } else {
+        throw new Error(data.message || "Failed to update complaint status");
+      }
+    } catch (err) {
+      Swal.fire({
+        title: "Error!",
+        text: err.message || "Failed to update complaint status",
+        icon: "error",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
   return (
-    <Container maxWidth="md" sx={{ mt: 5 }}>
+    <Box p={4}>
       <Typography variant="h4" gutterBottom>
-        Student Complaints
+        Complaints Management
       </Typography>
 
-      {loading ? (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <Paper elevation={3} sx={{ p: 3, borderRadius: 3 }}>
-          <List>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Complaint ID</TableCell>
+              <TableCell>User</TableCell>
+              <TableCell>Role</TableCell>
+              <TableCell>Complaint</TableCell>
+              <TableCell>Status</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {complaints.map((complaint) => (
-              <React.Fragment key={complaint._id}>
-                <ListItem
-                  alignItems="flex-start"
-                  sx={{ alignItems: "stretch" }}
-                >
-                  <ListItemText
-                    primary={
-                      <Typography variant="h6" gutterBottom>
-                        {complaint.complaint}
-                      </Typography>
-                    }
-                    secondary={
-                      <Stack spacing={1}>
-                        <Typography variant="body2" color="text.primary">
-                          <strong>Name:</strong> {complaint.userId.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.primary">
-                          <strong>Email:</strong> {complaint.userId.email}
-                        </Typography>
-                        <Typography variant="body2" color="text.primary">
-                          <strong>Role:</strong> {complaint.role}
-                        </Typography>
-                        <Typography variant="body2" color="text.primary">
-                          <strong>Date:</strong>{" "}
-                          {new Date(complaint.createdAt).toLocaleString()}
-                        </Typography>
-
-                        <FormControl fullWidth variant="outlined" size="small">
-                          <InputLabel>Status</InputLabel>
-                          <Select
-                            label="Status"
-                            value={complaint.status}
-                            onChange={(e) =>
-                              handleStatusChange(
-                                complaint.complaintId,
-                                e.target.value
-                              )
-                            }
-                          >
-                            {statusOptions.map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Stack>
-                    }
-                  />
-                  <Chip
-                    label={complaint.status}
-                    color={
-                      complaint.status === "Resolved"
-                        ? "success"
-                        : complaint.status === "Pending"
-                        ? "default"
-                        : "warning"
-                    }
-                    sx={{ height: 32, mt: 1, ml: 2 }}
-                  />
-                </ListItem>
-                <Divider sx={{ my: 2 }} />
-              </React.Fragment>
+              <TableRow key={complaint._id}>
+                <TableCell>{complaint.complaintId}</TableCell>
+                <TableCell>
+                  {complaint.userId.name}
+                  <br />
+                  <Typography variant="caption" color="textSecondary">
+                    {complaint.userId.email}
+                  </Typography>
+                </TableCell>
+                <TableCell>{complaint.role}</TableCell>
+                <TableCell>{complaint.complaint}</TableCell>
+                <TableCell>
+                  <FormControl size="small">
+                    <Select
+                      value={complaint.status}
+                      onChange={(e) => handleStatusChange(complaint.complaintId, e.target.value)}
+                      sx={{ minWidth: 120 }}
+                    >
+                      <MenuItem value="Pending">Pending</MenuItem>
+                      <MenuItem value="Resolved">Resolved</MenuItem>
+                    </Select>
+                  </FormControl>
+                </TableCell>
+              </TableRow>
             ))}
-          </List>
-        </Paper>
-      )}
-    </Container>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 }

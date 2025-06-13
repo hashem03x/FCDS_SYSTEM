@@ -26,6 +26,7 @@ import {
   DialogContent,
   DialogActions,
   Grid,
+  Alert,
 } from "@mui/material";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -71,6 +72,7 @@ export default function Grades() {
   const { authToken } = useAuth();
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
@@ -88,8 +90,13 @@ export default function Grades() {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const data = await response.json();
-      setGrades(data.data.grades);
+      if (data.success) {
+        setGrades(data.data.grades);
+      } else {
+        throw new Error(data.message || "Failed to fetch grades");
+      }
     } catch (error) {
+      setError(error.message);
       console.error("Error fetching grades:", error);
     } finally {
       setLoading(false);
@@ -296,6 +303,22 @@ export default function Grades() {
     }
   };
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
   return (
     <Box p={4}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
@@ -382,124 +405,145 @@ export default function Grades() {
         </CardContent>
       </Card>
 
-      {loading ? (
-        <Box display="flex" justifyContent="center" my={4}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: "primary.light" }}>
-                <TableCell sx={{ fontWeight: "bold" }}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <span>Student ID</span>
-                    <IconButton size="small" onClick={() => handleSort("studentId")}>
-                      <FontAwesomeIcon icon={getSortIcon("studentId")} />
-                    </IconButton>
+      <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: "primary.light" }}>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Student ID</span>
+                  <IconButton size="small" onClick={() => handleSort("studentId")}>
+                    <FontAwesomeIcon icon={getSortIcon("studentId")} />
+                  </IconButton>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Course Code</span>
+                  <IconButton size="small" onClick={() => handleSort("courseCode")}>
+                    <FontAwesomeIcon icon={getSortIcon("courseCode")} />
+                  </IconButton>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Course Name</span>
+                  <IconButton size="small" onClick={() => handleSort("courseName")}>
+                    <FontAwesomeIcon icon={getSortIcon("courseName")} />
+                  </IconButton>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Midterm Score</span>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Work Score</span>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Final Score</span>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Total Score</span>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Grade</span>
+                  <IconButton size="small" onClick={() => handleSort("grade")}>
+                    <FontAwesomeIcon icon={getSortIcon("grade")} />
+                  </IconButton>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Term</span>
+                  <IconButton size="small" onClick={() => handleSort("term")}>
+                    <FontAwesomeIcon icon={getSortIcon("term")} />
+                  </IconButton>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Date Graded</span>
+                  <IconButton size="small" onClick={() => handleSort("dateGraded")}>
+                    <FontAwesomeIcon icon={getSortIcon("dateGraded")} />
+                  </IconButton>
+                </Stack>
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>Credit Hours</TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Status</span>
+                </Stack>
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {getSortedData().map((grade) => (
+              <TableRow
+                key={grade._id}
+                sx={{
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                  },
+                }}
+              >
+                <TableCell>{grade.studentId}</TableCell>
+                <TableCell>{grade.courseCode}</TableCell>
+                <TableCell>{grade.courseName}</TableCell>
+                <TableCell>
+                  {grade.components?.midterm?.score || 0}/{grade.components?.midterm?.maxScore || 20}
+                </TableCell>
+                <TableCell>
+                  {grade.components?.work?.score || 0}/{grade.components?.work?.maxScore || 30}
+                </TableCell>
+                <TableCell>
+                  {grade.components?.final?.score || 0}/{grade.components?.final?.maxScore || 50}
+                </TableCell>
+                <TableCell>{grade.totalScore || 0}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={grade.grade}
+                    sx={{
+                      backgroundColor: gradeColors[grade.grade] || "#757575",
+                      color: "white",
+                      fontWeight: "bold",
+                    }}
+                  />
+                </TableCell>
+                <TableCell>{grade.term}</TableCell>
+                <TableCell>{formatDate(grade.dateGraded)}</TableCell>
+                <TableCell>{grade.creditHours}</TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1}>
+                    {grade.isRetake && (
+                      <Chip
+                        label={`Retake #${grade.attemptNumber}`}
+                        color="warning"
+                        size="small"
+                      />
+                    )}
+                    {grade.isFinalized && (
+                      <Chip
+                        label="Finalized"
+                        color="success"
+                        size="small"
+                      />
+                    )}
                   </Stack>
                 </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <span>Course Code</span>
-                    <IconButton size="small" onClick={() => handleSort("courseCode")}>
-                      <FontAwesomeIcon icon={getSortIcon("courseCode")} />
-                    </IconButton>
-                  </Stack>
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <span>Course Name</span>
-                    <IconButton size="small" onClick={() => handleSort("courseName")}>
-                      <FontAwesomeIcon icon={getSortIcon("courseName")} />
-                    </IconButton>
-                  </Stack>
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <span>Score</span>
-                    <IconButton size="small" onClick={() => handleSort("score")}>
-                      <FontAwesomeIcon icon={getSortIcon("score")} />
-                    </IconButton>
-                  </Stack>
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <span>Grade</span>
-                    <IconButton size="small" onClick={() => handleSort("grade")}>
-                      <FontAwesomeIcon icon={getSortIcon("grade")} />
-                    </IconButton>
-                  </Stack>
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <span>Term</span>
-                    <IconButton size="small" onClick={() => handleSort("term")}>
-                      <FontAwesomeIcon icon={getSortIcon("term")} />
-                    </IconButton>
-                  </Stack>
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <span>Date Graded</span>
-                    <IconButton size="small" onClick={() => handleSort("dateGraded")}>
-                      <FontAwesomeIcon icon={getSortIcon("dateGraded")} />
-                    </IconButton>
-                  </Stack>
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Credit Hours</TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {getSortedData().map((grade) => (
-                <TableRow
-                  key={grade._id}
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "action.hover",
-                    },
-                  }}
-                >
-                  <TableCell>{grade.studentId}</TableCell>
-                  <TableCell>{grade.courseCode}</TableCell>
-                  <TableCell>{grade.courseName}</TableCell>
-                  <TableCell>{grade.score}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={grade.grade}
-                      sx={{
-                        backgroundColor: gradeColors[grade.grade] || "#757575",
-                        color: "white",
-                        fontWeight: "bold",
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>{grade.term}</TableCell>
-                  <TableCell>{formatDate(grade.dateGraded)}</TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={1}>
-                      {grade.isRetake && (
-                        <Chip
-                          label={`Retake #${grade.attemptNumber}`}
-                          color="warning"
-                          size="small"
-                        />
-                      )}
-                      {grade.creditHours && (
-                        <Chip
-                          label={`${grade.creditHours} Credits`}
-                          color="info"
-                          size="small"
-                        />
-                      )}
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <Dialog
         open={chartDialogOpen}

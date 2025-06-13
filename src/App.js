@@ -41,6 +41,7 @@ import DoctorStudents from "./pages/Doctor/Students";
 import DoctorGrades from "./pages/Doctor/Grades";
 import DoctorSettings from "./pages/Doctor/Settings";
 import DoctorLectures from "./pages/Doctor/Lectures";
+import DoctorComplaints from "./pages/Doctor/Complaints";
 import SystemSettings from "./pages/Admin/SystemSettings/SystemSettings";
 
 // Memoized route components
@@ -130,6 +131,7 @@ const App = React.memo(() => {
         <Route path="grades" element={<DoctorGrades />} />
         <Route path="settings" element={<DoctorSettings />} />
         <Route path="lectures" element={<DoctorLectures />} />
+        <Route path="complaints" element={<DoctorComplaints />} />
       </Route>
     ),
     []

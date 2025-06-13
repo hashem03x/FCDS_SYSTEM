@@ -134,6 +134,11 @@ export default function MiniDrawer() {
       icon: faLayerGroup,
     },
     {
+      path: "/doctor/complaints",
+      name: "Complaints",
+      icon: faExclamationTriangle,
+    },
+    {
       path: "/doctor/settings",
       name: "Settings",
       icon: faGear,

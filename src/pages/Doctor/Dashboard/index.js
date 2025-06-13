@@ -20,7 +20,7 @@ const Dashboard = () => {
     { label: "Attendance", path: "/doctor/attendance" },
     { label: "Grades", path: "/doctor/grades" },
     { label: "Lectures", path: "/doctor/lectures" },
-
+    { label: "Complaints", path: "/doctor/complaints" },
   ];
 
   return (
