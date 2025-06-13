@@ -20,6 +20,7 @@ import Complaints from "./pages/Admin/Complaints";
 import Fees from "./pages/Admin/Fees";
 import Exams from "./pages/Admin/Exams";
 import Grades from "./pages/Admin/Grades";
+import Analytics from "./pages/Admin/Analytics";
 
 // Student Pages
 import StudentLayout from "./pages/Student/StudentLayout";
@@ -82,6 +83,7 @@ const App = React.memo(() => {
         <Route path="exams" element={<Exams />} />
         <Route path="grades" element={<Grades />} />
         <Route path="system-settings" element={<SystemSettings />} />
+        <Route path="analytics" element={<Analytics />} />
       </Route>
     ),
     []

@@ -88,7 +88,7 @@ export default function Grades() {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const data = await response.json();
-      setGrades(data);
+      setGrades(data.data.grades);
     } catch (error) {
       console.error("Error fetching grades:", error);
     } finally {

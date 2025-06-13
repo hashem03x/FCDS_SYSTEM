@@ -21,6 +21,7 @@ import {
   Grid,
   Stack,
   Tooltip,
+  Chip,
 } from "@mui/material";
 import Swal from "sweetalert2";
 import { useAuth } from "../../../context/AuthContext";
@@ -39,6 +40,7 @@ const initialFormState = {
   semester: "",
   startDate: "",
   endDate: "",
+  prerequisites: [],
 };
 
 function Courses() {
@@ -46,9 +48,27 @@ function Courses() {
   const [editingCourse, setEditingCourse] = useState(null);
   const [formData, setFormData] = useState(initialFormState);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPrerequisites, setSelectedPrerequisites] = useState([]);
 
   const { authToken } = useAuth();
   const { courses, doctors, loading, refreshCourses } = useAdmin();
+
+  const availablePrerequisites = courses.filter(
+    course => !editingCourse || course._id !== editingCourse._id
+  );
+
+  const handlePrerequisiteChange = (event) => {
+    const {
+      target: { value },
+    } = event;
+    setSelectedPrerequisites(
+      typeof value === 'string' ? value.split(',') : value,
+    );
+    setFormData(prev => ({
+      ...prev,
+      prerequisites: value
+    }));
+  };
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -216,6 +236,7 @@ function Courses() {
               <TableCell>Code</TableCell>
               <TableCell>Credit Hours</TableCell>
               <TableCell>Department</TableCell>
+              <TableCell>prerequisites</TableCell>
               <TableCell>Doctor</TableCell>
               <TableCell>Semester</TableCell>
               <TableCell align="right">Actions</TableCell>
@@ -243,6 +264,8 @@ function Courses() {
                   <TableCell>{course.code}</TableCell>
                   <TableCell>{course.creditHours}</TableCell>
                   <TableCell>{course.department}</TableCell>
+                  {console.log(course.prerequisites)}
+                  <TableCell>{course.prerequisites.map(prerequisite => prerequisite).join(', ')}</TableCell>
                   <TableCell>
                     {doctors.find(d => d.id === course.doctorId)?.name || "-"}
                   </TableCell>
@@ -336,7 +359,7 @@ function Courses() {
                   required
                 >
                   {doctors.map((doctor) => (
-                    <MenuItem key={doctor.id} value={doctor.id}>
+                    <MenuItem key={doctor._id} value={doctor._id}>
                       {doctor.name}
                     </MenuItem>
                   ))}
@@ -357,17 +380,14 @@ function Courses() {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  select
                   label="Semester"
                   name="semester"
+                  type="number"
                   value={formData.semester}
                   onChange={handleChange}
                   required
-                >
-                  <MenuItem value="Fall">Fall</MenuItem>
-                  <MenuItem value="Spring">Spring</MenuItem>
-                  <MenuItem value="Summer">Summer</MenuItem>
-                </TextField>
+                  inputProps={{ min: 1, max: 8 }}
+                />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -392,6 +412,39 @@ function Courses() {
                   required
                   InputLabelProps={{ shrink: true }}
                 />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Prerequisites"
+                  name="prerequisites"
+                  value={selectedPrerequisites}
+                  onChange={handlePrerequisiteChange}
+                  SelectProps={{
+                    multiple: true,
+                    renderValue: (selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => {
+                          const course = availablePrerequisites.find(c => c._id === value);
+                          return (
+                            <Chip
+                              key={value}
+                              label={`${course?.code} - ${course?.name}`}
+                              size="small"
+                            />
+                          );
+                        })}
+                      </Box>
+                    ),
+                  }}
+                >
+                  {availablePrerequisites.map((course) => (
+                    <MenuItem key={course._id} value={course._id}>
+                      {course.code} - {course.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Grid>
             </Grid>
           </Box>

@@ -23,6 +23,7 @@ import {
   faMoneyBillAlt,
   faFilePen,
   faUserGraduate,
+  faChartLine,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ListItemIcon, Typography } from "@mui/material";
@@ -109,6 +110,7 @@ export default function MiniDrawer() {
     { text: "Fees", path: "/admin/fees", icon: faMoneyBillAlt },
     { text: "Exams", path: "/admin/exams", icon: faFilePen },
     { text: "Grades", path: "/admin/grades", icon: faUserGraduate },
+    { text: "Analytics", path: "/admin/analytics", icon: faChartLine },
     { text: "System Settings", path: "/admin/system-settings", icon: faGear },
   ];
 

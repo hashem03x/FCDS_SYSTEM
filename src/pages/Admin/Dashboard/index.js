@@ -21,7 +21,8 @@ const Dashboard = () => {
     { label: "Fees", path: "/admin/fees" },
     { label: "Exams", path: "/admin/exams" },
     { label: "Grades", path: "/admin/grades" },
-    { label: "System Settings", path: "/admin/system-settings" },
+    { label: "System Settings", path: "/admin/system-settings" }, 
+    { label: "Students Analytics", path: "/admin/analytics" }, 
   ];
 
   return (
