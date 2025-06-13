@@ -108,6 +108,11 @@ const Profile = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // Create a temporary URL for the new image
+        const imageUrl = URL.createObjectURL(selectedFile);
+        // Update the user context with the new image URL
+        user.profilePicture = imageUrl;
+        
         await Swal.fire({
           title: "Success!",
           text: "Profile picture updated successfully",
@@ -116,8 +121,6 @@ const Profile = () => {
           confirmButtonColor: "#2F748F",
         });
         setSelectedFile(null);
-        // Refresh the page to show new profile picture
-        window.location.reload();
       } else {
         throw new Error(data.message || "Failed to update profile picture");
       }
@@ -204,12 +207,27 @@ const Profile = () => {
         <Grid item xs={12} md={4}>
           <Paper elevation={3} className="profile-section">
             <Box className="profile-picture-container">
-              <Avatar
-                src={user?.profilePicture}
-                alt={user?.name}
-                sx={{ width: 150, height: 150 }}
-                className="profile-picture"
-              />
+              {user?.profilePicture ? (
+                <img
+                  src={user.profilePicture}
+                  alt={user?.name}
+                  style={{
+                    width: 150,
+                    height: 150,
+                    borderRadius: '50%',
+                    objectFit: 'cover'
+                  }}
+                  className="profile-picture"
+                />
+              ) : (
+                <Avatar
+                  alt={user?.name}
+                  sx={{ width: 150, height: 150 }}
+                  className="profile-picture"
+                >
+                  {user?.name?.charAt(0)}
+                </Avatar>
+              )}
               <input
                 type="file"
                 accept="image/*"

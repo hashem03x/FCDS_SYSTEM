@@ -41,6 +41,15 @@ const initialFormState = {
   startDate: "",
   endDate: "",
   prerequisites: [],
+  lectureSessions: [
+    {
+      day: "",
+      startTime: "",
+      endTime: "",
+      room: "",
+      type: "Lecture"
+    }
+  ]
 };
 
 function Courses() {
@@ -159,7 +168,7 @@ function Courses() {
     e.preventDefault();
     try {
       const response = await fetch(
-        `${BASE_URL}/api/admin/update-course/${editingCourse._id}`,
+        `${BASE_URL}/api/admin/update-course/${editingCourse.code}`,
         {
           method: "PUT",
           headers: {
@@ -445,6 +454,99 @@ function Courses() {
                     </MenuItem>
                   ))}
                 </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Lecture Sessions</Typography>
+                {formData.lectureSessions.map((session, index) => (
+                  <Grid container spacing={2} key={index} sx={{ mb: 2 }}>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        fullWidth
+                        select
+                        label="Day"
+                        name={`lectureSessions[${index}].day`}
+                        value={session.day}
+                        onChange={(e) => {
+                          const newSessions = [...formData.lectureSessions];
+                          newSessions[index].day = e.target.value;
+                          setFormData(prev => ({ ...prev, lectureSessions: newSessions }));
+                        }}
+                        required
+                      >
+                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
+                          <MenuItem key={day} value={day}>{day}</MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        fullWidth
+                        label="Start Time"
+                        name={`lectureSessions[${index}].startTime`}
+                        type="time"
+                        value={session.startTime}
+                        onChange={(e) => {
+                          const newSessions = [...formData.lectureSessions];
+                          newSessions[index].startTime = e.target.value;
+                          setFormData(prev => ({ ...prev, lectureSessions: newSessions }));
+                        }}
+                        required
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        fullWidth
+                        label="End Time"
+                        name={`lectureSessions[${index}].endTime`}
+                        type="time"
+                        value={session.endTime}
+                        onChange={(e) => {
+                          const newSessions = [...formData.lectureSessions];
+                          newSessions[index].endTime = e.target.value;
+                          setFormData(prev => ({ ...prev, lectureSessions: newSessions }));
+                        }}
+                        required
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        fullWidth
+                        label="Room"
+                        name={`lectureSessions[${index}].room`}
+                        value={session.room}
+                        onChange={(e) => {
+                          const newSessions = [...formData.lectureSessions];
+                          newSessions[index].room = e.target.value;
+                          setFormData(prev => ({ ...prev, lectureSessions: newSessions }));
+                        }}
+                        required
+                      />
+                    </Grid>
+                  </Grid>
+                ))}
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      lectureSessions: [
+                        ...prev.lectureSessions,
+                        {
+                          day: "",
+                          startTime: "",
+                          endTime: "",
+                          room: "",
+                          type: "Lecture"
+                        }
+                      ]
+                    }));
+                  }}
+                  sx={{ mt: 1 }}
+                >
+                  Add Another Session
+                </Button>
               </Grid>
             </Grid>
           </Box>
