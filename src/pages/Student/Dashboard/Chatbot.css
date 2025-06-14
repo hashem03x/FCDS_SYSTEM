@@ -130,4 +130,69 @@
 
 .chatbot-input button:hover {
   background-color: #1565c0;
+}
+
+.youtube-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.youtube-link-card {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.youtube-link-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.youtube-link-title {
+  font-weight: 600;
+  color: #1a73e8;
+  font-size: 14px;
+}
+
+.youtube-link-author {
+  font-size: 12px;
+  color: #5f6368;
+}
+
+.youtube-link-details {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #5f6368;
+}
+
+.youtube-link-duration,
+.youtube-link-views {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.youtube-link-button {
+  display: inline-block;
+  background-color: #1a73e8;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.youtube-link-button:hover {
+  background-color: #1557b0;
+  text-decoration: none;
+  color: white;
 } 

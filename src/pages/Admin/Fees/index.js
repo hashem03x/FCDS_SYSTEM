@@ -24,26 +24,61 @@ import {
   FormControl,
 } from "@mui/material";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { BASE_URL } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
+import Swal from "sweetalert2";
 
 const statusOptions = ["Pending", "Paid", "Overdue"]; // Student fee status options
+const academicLevels = ["First", "Second", "Third", "Fourth"];
+const departments = [
+  "Administration",
+  "Computing and Data Science",
+  "Intelligent Systems",
+  "Cybersecurity",
+  "Business Analytics",
+  "Media Analytics",
+  "Healthcare Informatics and Data Analytics"
+];
+
+// Function to generate feeID
+const generateFeeId = (academicLevel, department) => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  // Get first letter of each word in department
+  const deptCode = department
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase();
+  
+  // Get number from academic level (First -> 1, Second -> 2, etc.)
+  const levelCode = academicLevel === "First" ? "1" :
+                   academicLevel === "Second" ? "2" :
+                   academicLevel === "Third" ? "3" : "4";
+  
+  return `FEE-${deptCode}-${levelCode}-${year}${month}${day}`;
+};
 
 export default function Fees() {
   const [fees, setFees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [newFee, setNewFee] = useState({
     feeId: "",
     academicLevel: "",
-    yearOfStudy: 1,
     department: "",
     amount: 0,
     dueDate: "",
   });
-  const [selectedFeeId, setSelectedFeeId] = useState(null);
   const { authToken } = useAuth();
+
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
 
   // Fetch fees data
   const fetchFees = async () => {
@@ -65,37 +100,16 @@ export default function Fees() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchFees();
   }, [authToken]);
 
-  // Handle adding or updating a fee
+  // Handle adding a fee
   const handleSaveFee = async () => {
-    if (selectedFeeId) {
-      // Update existing fee
-      const response = await fetch(
-        `${BASE_URL}/api/fee/update-fee/${selectedFeeId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify(newFee),
-        }
-      );
-
-      if (response.ok) {
-        setFees((prev) =>
-          prev.map((fee) =>
-            fee._id === selectedFeeId ? { ...fee, ...newFee } : fee
-          )
-        );
-        setOpenDialog(false);
-      }
-    } else {
-      // Add new fee
-      const response = await fetch(`${BASE_URL}/api/fee/add-fee`, {
+    setSaving(true);
+    try {
+      const response = await fetch(`${BASE_URL}/api/fees/add-fee`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -104,11 +118,28 @@ export default function Fees() {
         body: JSON.stringify(newFee),
       });
 
+      const data = await response.json();
       if (response.ok) {
-        const data = await response.json();
         setFees((prev) => [...prev, data]);
         setOpenDialog(false);
+        Swal.fire({
+          title: "Success!",
+          text: data.message || "Fee added successfully",
+          icon: "success",
+          confirmButtonColor: "#2F748F",
+        });
+      } else {
+        throw new Error(data.message || "Failed to add fee");
       }
+    } catch (error) {
+      Swal.fire({
+        title: "Error!",
+        text: error.message,
+        icon: "error",
+        confirmButtonColor: "#2F748F",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -128,30 +159,27 @@ export default function Fees() {
     }
   };
 
-  // Open dialog for adding or editing a fee
-  const openFeeDialog = (fee = null) => {
-    if (fee) {
-      setNewFee({
-        feeId: fee.feeId,
-        academicLevel: fee.academicLevel,
-        yearOfStudy: fee.yearOfStudy,
-        department: fee.department,
-        amount: fee.amount,
-        dueDate: fee.dueDate,
-      });
-      setSelectedFeeId(fee._id);
-    } else {
-      setNewFee({
-        feeId: "",
-        academicLevel: "",
-        yearOfStudy: 1,
-        department: "",
-        amount: 0,
-        dueDate: "",
-      });
-      setSelectedFeeId(null);
-    }
+  // Open dialog for adding a fee
+  const openFeeDialog = () => {
+    setNewFee({
+      feeId: "",
+      academicLevel: "",
+      department: "",
+      amount: 0,
+      dueDate: "",
+    });
     setOpenDialog(true);
+  };
+
+  // Handle academic level or department change
+  const handleLevelOrDeptChange = (field, value) => {
+    const updatedFee = { ...newFee, [field]: value };
+    if (field === 'academicLevel' || field === 'department') {
+      if (updatedFee.academicLevel && updatedFee.department) {
+        updatedFee.feeId = generateFeeId(updatedFee.academicLevel, updatedFee.department);
+      }
+    }
+    setNewFee(updatedFee);
   };
 
   return (
@@ -169,7 +197,7 @@ export default function Fees() {
           <Button
             variant="contained"
             color="primary"
-            onClick={() => openFeeDialog()}
+            onClick={openFeeDialog}
             sx={{ mb: 2 }}
           >
             <FontAwesomeIcon icon={faPlus} /> Add Fee
@@ -197,9 +225,6 @@ export default function Fees() {
                       {new Date(fee.dueDate).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <IconButton onClick={() => openFeeDialog(fee)}>
-                        <FontAwesomeIcon icon={faEdit} />
-                      </IconButton>
                       <IconButton onClick={() => handleDeleteFee(fee.feeId)}>
                         <FontAwesomeIcon icon={faTrash} />
                       </IconButton>
@@ -213,45 +238,43 @@ export default function Fees() {
       )}
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>{selectedFeeId ? "Edit Fee" : "Add Fee"}</DialogTitle>
+        <DialogTitle>Add Fee</DialogTitle>
         <DialogContent>
           <TextField
             label="Fee ID"
             fullWidth
             value={newFee.feeId}
-            onChange={(e) =>
-              setNewFee({ ...newFee, feeId: e.target.value })
-            }
+            disabled
             sx={{ mb: 2 }}
           />
-          <TextField
-            label="Academic Level"
-            fullWidth
-            value={newFee.academicLevel}
-            onChange={(e) =>
-              setNewFee({ ...newFee, academicLevel: e.target.value })
-            }
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Year of Study"
-            fullWidth
-            type="number"
-            value={newFee.yearOfStudy}
-            onChange={(e) =>
-              setNewFee({ ...newFee, yearOfStudy: e.target.value })
-            }
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Department"
-            fullWidth
-            value={newFee.department}
-            onChange={(e) =>
-              setNewFee({ ...newFee, department: e.target.value })
-            }
-            sx={{ mb: 2 }}
-          />
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Academic Level</InputLabel>
+            <Select
+              value={newFee.academicLevel}
+              label="Academic Level"
+              onChange={(e) => handleLevelOrDeptChange('academicLevel', e.target.value)}
+            >
+              {academicLevels.map((level) => (
+                <MenuItem key={level} value={level}>
+                  {level}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Department</InputLabel>
+            <Select
+              value={newFee.department}
+              label="Department"
+              onChange={(e) => handleLevelOrDeptChange('department', e.target.value)}
+            >
+              {departments.map((dept) => (
+                <MenuItem key={dept} value={dept}>
+                  {dept}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             label="Amount"
             fullWidth
@@ -270,14 +293,22 @@ export default function Fees() {
             InputLabelProps={{
               shrink: true,
             }}
+            inputProps={{
+              min: today
+            }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} color="secondary">
+          <Button onClick={() => setOpenDialog(false)} color="secondary" disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={handleSaveFee} color="primary">
-            Save
+          <Button 
+            onClick={handleSaveFee} 
+            color="primary"
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={20} /> : null}
+          >
+            {saving ? "Saving..." : "Save"}
           </Button>
         </DialogActions>
       </Dialog>

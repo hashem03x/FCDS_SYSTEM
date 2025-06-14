@@ -2,11 +2,14 @@ from pymongo import MongoClient
 from datetime import datetime
 import pandas as pd
 import re
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-
-app = Flask(__name__)
-CORS(app)
+from googletrans import Translator
+import arabic_reshaper
+from bidi.algorithm import get_display
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import random
+from pytube import Search
 
 class CollegeSystemChatbot:
     def __init__(self):
@@ -29,51 +32,600 @@ class CollegeSystemChatbot:
         self.student_id = None
         self.student_name = None
 
-        # Conversational responses
-        self.responses = {
-            'greeting': "Hello {name}! How can I help you today?",
-            'farewell': "Goodbye {name}! Have a great day!",
-            'not_understood': "I'm not sure I understand. Could you please rephrase your question?",
-            'no_data': "I couldn't find any information about that.",
-            'help': """Here are some things you can ask me about:
-- Your courses and schedule
-- Upcoming exams
-- Your grades
-- Announcements
-- Complaints
-- Course information
-- Professor information
-
-You can ask in natural language, like:
-- "What courses am I taking?"
-- "When are my exams?"
-- "Show me my grades"
-- "Tell me about my schedule"
-- "Who teaches Calculus?"
-- "What's new in announcements?" """
+        # Initialize translator
+        self.translator = Translator()
+        
+        # Initialize TF-IDF vectorizer for text similarity
+        self.vectorizer = TfidfVectorizer()
+        
+        # Define common intents and their keywords
+        self.intent_patterns = {
+            'greeting': [
+                'hello', 'hi', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening',
+                'مرحبا', 'السلام عليكم', 'اهلا', 'اهلا وسهلا', 'صباح الخير', 'مساء الخير'
+            ],
+            'farewell': [
+                'bye', 'goodbye', 'see you', 'take care', 'until next time',
+                'مع السلامة', 'الى اللقاء', 'وداعا', 'الى الملتقى'
+            ],
+            'thanks': [
+                'thanks', 'thank you', 'appreciate it', 'much obliged',
+                'شكرا', 'شكرا جزيلا', 'مشكور', 'مشكورة', 'يعطيك العافية'
+            ],
+            'how_are_you': [
+                'how are you', 'how do you do', 'how\'s it going', 'how\'s everything',
+                'كيف حالك', 'كيف الحال', 'كيفك', 'كيف حالك اليوم'
+            ],
+            'weather': [
+                'weather', 'temperature', 'forecast', 'rain', 'sunny', 'cloudy',
+                'الطقس', 'درجة الحرارة', 'الجو', 'ممطر', 'مشمس', 'غائم'
+            ],
+            'time': [
+                'time', 'what time', 'current time', 'clock',
+                'الساعة', 'كم الساعة', 'الوقت', 'التوقيت'
+            ],
+            'date': [
+                'date', 'what day', 'today', 'tomorrow', 'yesterday',
+                'التاريخ', 'اليوم', 'غدا', 'البارحة'
+            ],
+            'joke': [
+                'joke', 'funny', 'humor', 'laugh',
+                'نكتة', 'ضحك', 'فكاهة', 'طرفة'
+            ],
+            'help': [
+                'help', 'what can you do', 'capabilities', 'features',
+                'مساعدة', 'ماذا تستطيع', 'قدراتك', 'مميزاتك'
+            ],
+            'name': [
+                'what is your name', 'who are you', 'your name',
+                'ما اسمك', 'من انت', 'تعريف نفسك'
+            ],
+            'age': [
+                'how old are you', 'your age', 'when were you born',
+                'كم عمرك', 'عمرك', 'متى ولدت'
+            ],
+            'purpose': [
+                'what do you do', 'why are you here', 'your purpose',
+                'ماذا تفعل', 'لماذا انت هنا', 'هدفك'
+            ],
+            'mood': [
+                'how do you feel', 'are you happy', 'your mood',
+                'كيف تشعر', 'هل انت سعيد', 'مزاجك'
+            ],
+            'course_information': [
+                'course', 'class', 'subject', 'مادة', 'كورس',
+                'tell me about', 'what is', 'show me', 'info'
+            ],
+            'schedule_information': [
+                'schedule', 'timetable', 'when', 'time', 'جدول',
+                'مواعيد', 'متى', 'وقت'
+            ],
+            'grade_information': [
+                'grade', 'score', 'result', 'mark', 'درجة',
+                'نتيجة', 'علامة'
+            ],
+            'exam_information': [
+                'exam', 'test', 'quiz', 'امتحان', 'اختبار'
+            ],
+            'announcement_information': [
+                'announcement', 'news', 'update', 'إعلان',
+                'خبر', 'تحديث'
+            ],
+            'complaint_information': [
+                'complaint', 'issue', 'problem', 'شكوى',
+                'مشكلة'
+            ],
+            'prerequisite_information': [
+                'prerequisite', 'requirement', 'need', 'متطلب',
+                'شرط'
+            ],
+            'elective_course_information': [
+                'elective', 'optional', 'اختياري', 'اختيارية'
+            ],
+            'professor_information': [
+                'professor', 'doctor', 'teacher', 'instructor',
+                'أستاذ', 'دكتور', 'مدرس'
+            ],
+            'study_help': [
+                'help me study', 'learn', 'tutorial', 'explain', 'teach me', 'how to',
+                'ساعدني في الدراسة', 'شرح', 'تعليم', 'كيف اتعلم', 'دروس', 'شرح'
+            ],
+            'youtube_search': [
+                'youtube', 'video', 'watch', 'search', 'find video',
+                'يوتيوب', 'فيديو', 'شاهد', 'ابحث', 'اعثر على فيديو'
+            ]
         }
 
-        # Common variations of keywords
-        self.keyword_variations = {
-            'announcement': ['announcement', 'news', 'update', 'new', 'latest', 'recent'],
-            'complaint': ['complaint', 'issue', 'problem', 'concern', 'report'],
-            'course': ['course', 'subject', 'class', 'lecture', 'module'],
-            'exam': ['exam', 'test', 'quiz', 'midterm', 'final'],
-            'grade': ['grade', 'mark', 'score', 'result', 'performance'],
-            'schedule': ['schedule', 'timetable', 'when is my class', 'class time', 'lecture time'],
-            'professor': ['professor', 'instructor', 'teacher', 'lecturer', 'doctor'],
-            'help': ['help', 'what can you do', 'how can you help', 'what do you know', 'show options']
+        # Define responses for conversational intents
+        self.conversation_responses = {
+            'greeting': {
+                'en': [
+                    "Hello! How can I help you today?",
+                    "Hi! What can I do for you?",
+                    "Greetings! How may I assist you?"
+                ],
+                'ar': [
+                    "مرحبا! كيف يمكنني مساعدتك اليوم؟",
+                    "اهلا! كيف يمكنني خدمتك؟",
+                    "السلام عليكم! كيف يمكنني مساعدتك؟"
+                ]
+            },
+            'farewell': {
+                'en': [
+                    "Goodbye! Have a great day!",
+                    "See you later! Take care!",
+                    "Until next time! Good luck with your studies!"
+                ],
+                'ar': [
+                    "مع السلامة! اتمنى لك يوما سعيدا!",
+                    "الى اللقاء! اعتني بنفسك!",
+                    "الى الملتقى! بالتوفيق في دراستك!"
+                ]
+            },
+            'thanks': {
+                'en': [
+                    "You're welcome!",
+                    "My pleasure!",
+                    "Happy to help!"
+                ],
+                'ar': [
+                    "العفو!",
+                    "على الرحب والسعة!",
+                    "سعيد بمساعدتك!"
+                ]
+            },
+            'how_are_you': {
+                'en': [
+                    "I'm doing well, thank you for asking! How can I help you today?",
+                    "I'm great! What can I do for you?",
+                    "All good here! How may I assist you?"
+                ],
+                'ar': [
+                    "بخير والحمد لله! كيف يمكنني مساعدتك اليوم؟",
+                    "ممتاز! كيف يمكنني خدمتك؟",
+                    "كل شيء على ما يرام! كيف يمكنني مساعدتك؟"
+                ]
+            },
+            'weather': {
+                'en': [
+                    "I'm sorry, I don't have access to real-time weather information. You might want to check a weather app or website for accurate forecasts.",
+                    "I can't check the weather right now, but I hope it's nice where you are!",
+                    "I don't have weather data, but I can help you with other things!"
+                ],
+                'ar': [
+                    "عذراً، ليس لدي إمكانية الوصول إلى معلومات الطقس المباشرة. يمكنك التحقق من تطبيق أو موقع الطقس للحصول على توقعات دقيقة.",
+                    "لا يمكنني التحقق من الطقس الآن، لكنني أتمنى أن يكون الجو جميلاً حيث أنت!",
+                    "ليس لدي بيانات الطقس، لكن يمكنني مساعدتك في أمور أخرى!"
+                ]
+            },
+            'time': {
+                'en': [
+                    f"The current time is {datetime.now().strftime('%I:%M %p')}.",
+                    f"It's {datetime.now().strftime('%I:%M %p')} right now.",
+                    f"Right now it's {datetime.now().strftime('%I:%M %p')}."
+                ],
+                'ar': [
+                    f"الساعة الآن {datetime.now().strftime('%I:%M %p')}.",
+                    f"الوقت الحالي هو {datetime.now().strftime('%I:%M %p')}.",
+                    f"حالياً الساعة {datetime.now().strftime('%I:%M %p')}."
+                ]
+            },
+            'date': {
+                'en': [
+                    f"Today is {datetime.now().strftime('%A, %B %d, %Y')}.",
+                    f"It's {datetime.now().strftime('%A, %B %d, %Y')} today.",
+                    f"The date is {datetime.now().strftime('%A, %B %d, %Y')}."
+                ],
+                'ar': [
+                    f"اليوم هو {datetime.now().strftime('%A, %B %d, %Y')}.",
+                    f"التاريخ اليوم هو {datetime.now().strftime('%A, %B %d, %Y')}.",
+                    f"نحن في {datetime.now().strftime('%A, %B %d, %Y')}."
+                ]
+            },
+            'joke': {
+                'en': [
+                    "Why don't scientists trust atoms? Because they make up everything!",
+                    "What do you call a fake noodle? An impasta!",
+                    "Why did the scarecrow win an award? Because he was outstanding in his field!"
+                ],
+                'ar': [
+                    "لماذا لا يثق العلماء بالذرات؟ لأنها تتكون من كل شيء!",
+                    "ماذا تسمي المعكرونة المزيفة؟ معكرونة مزيفة!",
+                    "لماذا فاز الفزاعة بجائزة؟ لأنه كان متميزاً في مجاله!"
+                ]
+            },
+            'help': {
+                'en': [
+                    "I can help you with:\n- College information (courses, grades, schedule)\n- General conversation\n- Time and date\n- Jokes and fun facts\n- And much more! Just ask!",
+                    "I'm here to help with:\n- Academic information\n- Casual conversation\n- Basic information\n- Entertainment\nWhat would you like to know?",
+                    "I can assist you with various topics:\n- College-related queries\n- General knowledge\n- Time and weather\n- Fun interactions\nHow can I help you today?"
+                ],
+                'ar': [
+                    "يمكنني مساعدتك في:\n- معلومات الكلية (الدورات، الدرجات، الجدول)\n- المحادثة العامة\n- الوقت والتاريخ\n- النكت والحقائق الممتعة\n- والمزيد! فقط اسأل!",
+                    "أنا هنا للمساعدة في:\n- المعلومات الأكاديمية\n- المحادثة العادية\n- المعلومات الأساسية\n- الترفيه\nماذا تريد أن تعرف؟",
+                    "يمكنني مساعدتك في مواضيع مختلفة:\n- استفسارات الكلية\n- المعرفة العامة\n- الوقت والطقس\n- التفاعلات الممتعة\nكيف يمكنني مساعدتك اليوم؟"
+                ]
+            },
+            'name': {
+                'en': [
+                    "I'm the College System Chatbot, but you can call me CollegeBot!",
+                    "My name is CollegeBot, and I'm here to help you!",
+                    "I'm CollegeBot, your friendly college assistant!"
+                ],
+                'ar': [
+                    "أنا روبوت نظام الكلية، لكن يمكنك مناداتي كوليج بوت!",
+                    "اسمي كوليج بوت، وأنا هنا لمساعدتك!",
+                    "أنا كوليج بوت، مساعدك الودود في الكلية!"
+                ]
+            },
+            'age': {
+                'en': [
+                    "I'm a computer program, so I don't have an age in the traditional sense. I was created to help students!",
+                    "As an AI, I don't have an age, but I'm always learning and growing!",
+                    "I'm timeless! I exist to help students like you!"
+                ],
+                'ar': [
+                    "أنا برنامج كمبيوتر، لذا ليس لدي عمر بالمعنى التقليدي. تم إنشائي لمساعدة الطلاب!",
+                    "كذكاء اصطناعي، ليس لدي عمر، لكنني أتعلم وأتطور دائماً!",
+                    "أنا خالد! أنا موجود لمساعدة طلاب مثلك!"
+                ]
+            },
+            'purpose': {
+                'en': [
+                    "I'm here to help students with their college-related questions and provide general assistance!",
+                    "My purpose is to make your college experience easier by answering questions and providing information!",
+                    "I'm designed to help students navigate college life and answer their questions!"
+                ],
+                'ar': [
+                    "أنا هنا لمساعدة الطلاب في أسئلتهم المتعلقة بالكلية وتقديم المساعدة العامة!",
+                    "هدفي هو تسهيل تجربة الكلية عليك من خلال الإجابة على الأسئلة وتقديم المعلومات!",
+                    "تم تصميمي لمساعدة الطلاب في التنقل في حياة الكلية والإجابة على أسئلتهم!"
+                ]
+            },
+            'mood': {
+                'en': [
+                    "I'm feeling great and ready to help! How about you?",
+                    "I'm in a good mood and excited to assist you!",
+                    "I'm feeling positive and ready for our conversation!"
+                ],
+                'ar': [
+                    "أشعر بأنني بحالة جيدة ومستعد للمساعدة! ماذا عنك؟",
+                    "أنا في مزاج جيد ومتحمس لمساعدتك!",
+                    "أشعر بالإيجابية ومستعد لمحادثتنا!"
+                ]
+            },
+            'study_help': {
+                'en': [
+                    "I'll help you find some educational videos on YouTube. What topic would you like to learn about?",
+                    "I can search for helpful tutorials on YouTube. What subject do you need help with?",
+                    "Let me find some educational content for you. What would you like to learn?"
+                ],
+                'ar': [
+                    "سأساعدك في العثور على بعض الفيديوهات التعليمية على يوتيوب. ما هو الموضوع الذي تريد التعلم عنه؟",
+                    "يمكنني البحث عن دروس مفيدة على يوتيوب. ما هو الموضوع الذي تحتاج مساعدة فيه؟",
+                    "دعني أجد بعض المحتوى التعليمي لك. ماذا تريد أن تتعلم؟"
+                ]
+            }
         }
 
-    def initialize_student(self, student_id):
-        """Initialize student session with given ID"""
-        self.student_id = student_id
-        student = self.users.find_one({"id": self.student_id, "role": "student"})
-        if student:
-            self.student_name = student.get('name', 'Student')
-            return True, f"Hello {self.student_name}, ID: {self.student_id}"
-        return False, "Student ID not found in the database"
-    
+    def detect_language(self, text):
+        """Detect if the text is in Arabic or English"""
+        # Simple heuristic: check for Arabic characters
+        arabic_pattern = re.compile('[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+')
+        return 'ar' if arabic_pattern.search(text) else 'en'
+
+    def translate_text(self, text, target_lang='en'):
+        """Translate text between Arabic and English"""
+        try:
+            result = self.translator.translate(text, dest=target_lang)
+            return result.text
+        except Exception as e:
+            print(f"Translation error: {e}")
+            return text
+
+    def process_arabic_text(self, text):
+        """Process Arabic text for display"""
+        reshaped_text = arabic_reshaper.reshape(text)
+        return get_display(reshaped_text)
+
+    def classify_intent(self, query):
+        """Classify the intent of the user's query using keyword matching"""
+        query_lower = query.lower()
+        
+        # Calculate similarity scores for each intent
+        intent_scores = {}
+        for intent, patterns in self.intent_patterns.items():
+            # Count how many keywords from this intent appear in the query
+            score = sum(1 for pattern in patterns if pattern.lower() in query_lower)
+            intent_scores[intent] = score
+        
+        # Get the intent with the highest score
+        if intent_scores:
+            max_intent = max(intent_scores.items(), key=lambda x: x[1])
+            return max_intent[0] if max_intent[1] > 0 else None
+        return None
+
+    def extract_entities(self, query):
+        """Extract relevant entities from the query"""
+        entities = {
+            'course_name': None,
+            'course_code': None,
+            'date': None,
+            'professor_name': None
+        }
+
+        # Extract course code (format: XX-XX-XXXXX)
+        course_code_pattern = r'\d{2}-\d{2}-\d{5}'
+        course_code_match = re.search(course_code_pattern, query)
+        if course_code_match:
+            entities['course_code'] = course_code_match.group(0)
+
+        # Extract course name using keyword matching
+        course_keywords = ['course', 'class', 'subject', 'مادة', 'كورس']
+        words = query.split()
+        for i, word in enumerate(words):
+            if word.lower() in course_keywords and i + 1 < len(words):
+                # Try to get 2-3 words after the keyword as the course name
+                potential_name = ' '.join(words[i+1:i+3])
+                if potential_name:
+                    entities['course_name'] = potential_name
+
+        return entities
+
+    def get_conversation_response(self, intent, lang='en'):
+        """Get a random response for conversational intents"""
+        responses = self.conversation_responses.get(intent, {}).get(lang, [])
+        return random.choice(responses) if responses else None
+
+    def search_youtube(self, query, max_results=5):
+        """Search YouTube for educational content"""
+        try:
+            # Add educational keywords to improve search results
+            search_query = f"{query} tutorial educational learn"
+            
+            # Create a search object
+            search = Search(search_query)
+            
+            results = []
+            count = 0
+            
+            # Get the first page of results
+            for video in search.results:
+                if count >= max_results:
+                    break
+                    
+                try:
+                    # Basic video information that's always available
+                    video_data = {
+                        'title': video.title,
+                        'url': f"https://www.youtube.com/watch?v={video.video_id}",
+                        'author': video.author,
+                        'duration': 0,  # Default duration
+                        'views': 0     # Default views
+                    }
+                    
+                    # Try to get additional information
+                    try:
+                        video_data['duration'] = video.length
+                    except:
+                        pass
+                        
+                    try:
+                        video_data['views'] = video.views
+                    except:
+                        pass
+                    
+                    results.append(video_data)
+                    count += 1
+                    
+                except Exception as e:
+                    print(f"Error processing video: {e}")
+                    continue
+            
+            return results if results else None
+            
+        except Exception as e:
+            print(f"Error searching YouTube: {e}")
+            return None
+
+    def format_youtube_results(self, results, lang='en'):
+        """Format YouTube search results for display"""
+        if not results:
+            return {
+                'type': 'text',
+                'content': {
+                    'en': "I'm having trouble finding videos right now. Please try again in a moment.",
+                    'ar': "أواجه مشكلة في العثور على الفيديوهات الآن. يرجى المحاولة مرة أخرى بعد قليل."
+                }[lang]
+            }
+
+        # Create a structured response with type "links"
+        response = {
+            'type': 'links',
+            'content': {
+                'title': {
+                    'en': "Here are some helpful videos I found:",
+                    'ar': "إليك بعض الفيديوهات المفيدة التي وجدتها:"
+                }[lang],
+                'videos': []
+            }
+        }
+
+        for video in results:
+            duration = video.get('duration', 0)
+            duration_min = duration // 60 if duration else 0
+            duration_sec = duration % 60 if duration else 0
+            views = video.get('views', 0)
+            
+            video_info = {
+                'title': video.get('title', 'Untitled'),
+                'author': video.get('author', 'Unknown'),
+                'url': video.get('url', ''),
+                'duration': f"{duration_min}:{duration_sec:02d}" if duration else None,
+                'views': views
+            }
+            
+            response['content']['videos'].append(video_info)
+
+        return response
+
+    def process_query(self, query):
+        """Enhanced query processing with NLP capabilities"""
+        # Detect language
+        lang = self.detect_language(query)
+        
+        # Translate if necessary
+        if lang == 'ar':
+            translated_query = self.translate_text(query)
+        else:
+            translated_query = query
+
+        # Check for study help or YouTube search intent
+        study_help_patterns = ['help me study', 'learn', 'tutorial', 'explain', 'teach me', 'how to',
+                             'ساعدني في الدراسة', 'شرح', 'تعليم', 'كيف اتعلم', 'دروس', 'شرح']
+        youtube_patterns = ['youtube', 'video', 'watch', 'search', 'find video',
+                          'يوتيوب', 'فيديو', 'شاهد', 'ابحث', 'اعثر على فيديو']
+
+        # Check if the query contains study help patterns
+        if any(pattern in translated_query.lower() for pattern in study_help_patterns):
+            # Extract the topic from the query
+            topic = re.sub('|'.join(study_help_patterns), '', translated_query, flags=re.IGNORECASE).strip()
+            if topic:
+                results = self.search_youtube(topic)
+                return self.format_youtube_results(results, lang)
+            else:
+                return {
+                    'en': "What topic would you like to learn about?",
+                    'ar': "ما هو الموضوع الذي تريد التعلم عنه؟"
+                }[lang]
+
+        # Check if the query contains YouTube search patterns
+        if any(pattern in translated_query.lower() for pattern in youtube_patterns):
+            # Extract the search query
+            search_query = re.sub('|'.join(youtube_patterns), '', translated_query, flags=re.IGNORECASE).strip()
+            if search_query:
+                results = self.search_youtube(search_query)
+                return self.format_youtube_results(results, lang)
+            else:
+                return {
+                    'en': "What would you like to search for on YouTube?",
+                    'ar': "ماذا تريد البحث عنه على يوتيوب؟"
+                }[lang]
+
+        # Classify intent for other queries
+        intent = self.classify_intent(translated_query)
+        
+        # Handle other intents
+        if intent in self.conversation_responses:
+            return self.get_conversation_response(intent, lang)
+        
+        # If no specific intent is matched, try to find the most similar question
+        try:
+            # Get all possible questions from the database
+            all_questions = self.get_all_possible_questions()
+            
+            # Vectorize the questions and the query
+            questions_vectorized = self.vectorizer.fit_transform(all_questions + [translated_query])
+            
+            # Calculate similarity between query and all questions
+            similarity_scores = cosine_similarity(questions_vectorized[-1:], questions_vectorized[:-1])[0]
+            
+            # Get the most similar question
+            most_similar_idx = similarity_scores.argmax()
+            if similarity_scores[most_similar_idx] > 0.3:  # Threshold for similarity
+                return self.answer_question(all_questions[most_similar_idx])
+            
+            # If no similar question is found, provide a general response
+            general_responses = {
+                'en': [
+                    "I'm not sure I understand. Could you please rephrase that?",
+                    "I'm still learning. Could you try asking that differently?",
+                    "I'm not quite sure what you mean. Can you explain differently?"
+                ],
+                'ar': [
+                    "أنا لست متأكداً من فهمي. هل يمكنك إعادة صياغة ذلك؟",
+                    "أنا ما زلت أتعلم. هل يمكنك طرح السؤال بطريقة مختلفة؟",
+                    "أنا لست متأكداً تماماً مما تعنيه. هل يمكنك الشرح بطريقة مختلفة؟"
+                ]
+            }
+            return random.choice(general_responses[lang])
+        except Exception as e:
+            print(f"Error processing query: {e}")
+            return "I'm sorry, I couldn't understand your question. Could you please rephrase it?"
+
+    def get_all_possible_questions(self):
+        """Get a list of all possible questions from the database"""
+        questions = []
+        
+        # Add course-related questions
+        courses = self.get_courses()
+        for course in courses:
+            questions.extend([
+                f"What is {course['name']}?",
+                f"Tell me about {course['name']}",
+                f"Who teaches {course['name']}?",
+                f"When is {course['name']} scheduled?",
+                f"What are the prerequisites for {course['name']}?"
+            ])
+        
+        # Add schedule-related questions
+        questions.extend([
+            "What is my schedule?",
+            "When are my classes?",
+            "Show me my timetable",
+            "What classes do I have today?"
+        ])
+        
+        # Add grade-related questions
+        questions.extend([
+            "What are my grades?",
+            "Show me my results",
+            "How did I do in my courses?"
+        ])
+        
+        return questions
+
+    def answer_question(self, question):
+        """Answer a specific question based on its type"""
+        question_lower = question.lower()
+        
+        if "what is" in question_lower or "tell me about" in question_lower:
+            # Extract course name
+            course_name = re.sub(r'(what is|tell me about)\s*', '', question_lower).strip('?')
+            courses = self.get_courses_by_name(course_name)
+            return self.show_courses(courses)
+            
+        elif "who teaches" in question_lower:
+            course_name = re.sub(r'who teaches\s*', '', question_lower).strip('?')
+            courses = self.get_courses_by_name(course_name)
+            if courses:
+                course = courses[0]
+                doctor = self.users.find_one({"id": course['doctorId'], "role": "doctor"})
+                return self.show_doctor_info(doctor, course)
+                
+        elif "when is" in question_lower or "scheduled" in question_lower:
+            course_name = re.sub(r'(when is|scheduled)\s*', '', question_lower).strip('?')
+            courses = self.get_courses_by_name(course_name)
+            if courses:
+                return self.show_course_detail(courses[0])
+                
+        elif "prerequisites" in question_lower:
+            course_name = re.sub(r'what are the prerequisites for\s*', '', question_lower).strip('?')
+            courses = self.get_courses_by_name(course_name)
+            if courses:
+                completed, missing, message = self.check_prerequisites(self.student_id, courses[0]['code'])
+                return f"Prerequisites check: {message}\nMissing: {', '.join(missing) if missing else 'None'}"
+                
+        elif "schedule" in question_lower or "classes" in question_lower:
+            schedule = self.get_student_schedule(self.student_id)
+            return self.show_schedule(schedule)
+            
+        elif "grades" in question_lower or "results" in question_lower:
+            grades = self.get_grades(self.student_id)
+            return self.show_grades(grades)
+            
+        return "I'm sorry, I couldn't find a specific answer to that question."
+
     def get_student_id(self):
         """Prompt the user to enter their student ID at startup"""
         while not self.student_id:
@@ -88,6 +640,46 @@ You can ask in natural language, like:
                 else:
                     print("\nStudent ID not found in the database. Please try again.\n")
                     self.student_id = None  # Reset to prompt again
+    
+    def show_welcome(self):
+        welcome_msg = f"""
+        🏫 College System Chatbot  
+        👤 Student: {self.student_name} (ID: {self.student_id})  
+        
+        How can I help you today?  
+        
+        You can ask about:  
+        - 📢 Announcements  
+        - 📝 Complaints  
+        - 📚 Courses (search by name/code)  
+        - 📝 Exams  
+        - 📊 Grades  
+        - 👨‍🏫 Who teaches a course  
+        - 🗓️ My class schedule
+        - 📅 when are my classes
+        - 📖 What courses am I taking
+        - 📋 Check prerequisites for a course
+        - 🎯 Elective courses
+        
+        Examples:  
+        - show my courses
+        - what upcoming exams
+        - who teaches Calculus  
+        - get me my grades  
+        - info for programming 1
+        - when is my linear algebra class
+        - what's my schedule this semester
+        - which courses am I enrolled in
+        - info for Stochastic Processes
+        - courses (shows all available courses)
+        - what are the prerequisites for Data Structures
+        - have I completed prerequisites for Programming II
+        - show elective courses
+        - المواد الاختيارية
+        
+        Type 'exit' to quit
+        """
+        print(welcome_msg)
     
     # Database query methods
     def get_doctor_name(self, doctor_id):
@@ -260,316 +852,278 @@ You can ask in natural language, like:
     
         return list(self.exams.find(query).sort("examDate", 1).limit(limit))
     
+    # NEW: Check if student has completed prerequisites for a course
+    def check_prerequisites(self, student_id, course_code):
+        """Check if student has completed prerequisites for a course"""
+        course = self.courses.find_one({"code": course_code})
+        if not course:
+            return False, [], "Course not found"
+        
+        # Get list of prerequisites
+        prerequisites = course.get('prerequisites', [])
+        if not prerequisites:
+            return True, [], "No prerequisites required"
+        
+        # Get student's completed courses with passing grades
+        passed_courses = set()
+        for grade in self.grades.find({"studentId": student_id}):
+            try:
+                # Convert score to float and check if passing
+                if float(grade.get('score', 0)) >= 60.0:
+                    passed_courses.add(grade['courseCode'])
+            except ValueError:
+                continue
+        
+        # Check which prerequisites are missing
+        missing = []
+        for prereq in prerequisites:
+            if prereq not in passed_courses:
+                # Get course name for better display
+                prereq_course = self.courses.find_one({"code": prereq})
+                if prereq_course:
+                    missing.append(f"{prereq_course['name']} ({prereq})")
+                else:
+                    missing.append(prereq)
+        
+        if missing:
+            return False, missing, f"You have not completed {len(missing)} prerequisite(s)"
+        return True, [], "All prerequisites completed"
+    
+    # NEW: Get elective courses - FIXED VERSION
+    def get_elective_courses(self):
+        """Get elective courses from database - fixed version"""
+        # First check if the 'type' field exists at all
+        if self.courses.count_documents({"type": {"$exists": True}}) == 0:
+            return None  # Special flag indicating field doesn't exist
+        
+        # Case-insensitive search for elective courses
+        return list(self.courses.find({
+            "type": {"$regex": "elective", "$options": "i"},
+            "isActive": True
+        }))
+    
+    # NEW: Show elective courses with proper error handling
+    def show_elective_courses(self, elective_courses):
+        """Display elective courses with proper error handling"""
+        if elective_courses is None:
+            return """
+            Error: 'type' Field Not Found
+            The database does not have a 'type' field to identify elective courses.
+            Please contact system administrator to fix this issue.
+            """
+        
+        if not elective_courses:
+            return """
+            No Elective Courses Found
+            There are currently no active elective courses available.
+            Please check back later or contact the academic department.
+            """
+        
+        return self.show_courses(elective_courses, title="Elective Courses")
+    
     # Response display methods
     def show_announcements(self, announcements):
         if not announcements:
-            return {"type": "text", "content": "No announcements found."}
+            return "No announcements found."
         
         announcements_list = []
         for ann in announcements:
             announcements_list.append({
-                'content': ann['content'],
-                'course': ann.get('courseCode', 'N/A'),
-                'from': ann['senderDetails'].get('name', ann['sender']),
-                'date': ann['createdAt'].strftime('%Y-%m-%d') if isinstance(ann['createdAt'], datetime) else ann['createdAt']
+                'Title': ann['title'],
+                'Content': ann['content'],
+                'Course': ann.get('courseCode', 'N/A'),
+                'From': ann['senderDetails'].get('name', ann['sender']),
+                'Date': ann['createdAt'].strftime('%Y-%m-%d') if isinstance(ann['createdAt'], datetime) else ann['createdAt']
             })
         
-        return {
-            "type": "announcement",
-            "title": "Announcements",
-            "headers": [ "Content", "Course", "From", "Date"],
-            "data": announcements_list
-        }
+        df = pd.DataFrame(announcements_list)
+        return df.to_string(index=False)
     
     def show_complaints(self, complaints):
         if not complaints:
-            return {"type": "text", "content": "No complaints found."}
+            return "No complaints found."
         
         complaints_list = []
         for comp in complaints:
             complaints_list.append({
-                'userId': comp['userId'],
-                'role': comp['role'],
-                'complaint': comp['complaint'],
-                'status': comp['status'],
-                'date': comp['createdAt'].strftime('%Y-%m-%d') if isinstance(comp['createdAt'], datetime) else comp['createdAt']
+                'User ID': comp['userId'],
+                'Role': comp['role'],
+                'Complaint': comp['complaint'],
+                'Status': comp['status'],
+                'Date': comp['createdAt'].strftime('%Y-%m-%d') if isinstance(comp['createdAt'], datetime) else comp['createdAt']
             })
         
-        return {
-            "type": "table",
-            "title": "Complaints",
-            "headers": ["User ID", "Role", "Complaint", "Status", "Date"],
-            "data": complaints_list
-        }
+        df = pd.DataFrame(complaints_list)
+        return df.to_string(index=False)
     
     def show_courses(self, courses, title="Courses"):
         if not courses:
-            return {
-                "type": "text",
-                "content": "No courses found matching your criteria."
-            }
+            return f"""
+            No courses found
+            There are currently no courses matching your criteria.
+            """
         
         courses_list = []
         for course in courses:
             doctor_name = self.get_doctor_name(course['doctorId'])
+            course_type = course.get('type', 'core').capitalize() if course.get('type') else 'Core'
             courses_list.append({
-                'code': course['code'],
-                'name': course['name'],
-                'doctor': doctor_name,
-                'department': course['department'],
-                'creditHours': course.get('creditHours', 'N/A'),
-                'semester': course.get('semester', 'N/A')
+                'Code': course['code'],
+                'Name': course['name'],
+                'Doctor': doctor_name,
+                'Department': course['department'],
+                'Credit Hours': course.get('creditHours', 'N/A'),
+                'Semester': course.get('semester', 'N/A'),
+                'Type': course_type
             })
         
-        return {
-            "type": "table",
-            "title": title,
-            "headers": ["Code", "Name", "Doctor", "Department", "Credit hours", "Semester"],
-            "data": courses_list
-        }
+        df = pd.DataFrame(courses_list)
+        return f"{title}\n{df.to_string(index=False)}"
     
     def show_exams(self, exams, title="Exams"):
         if not exams:
-            return {
-                "type": "text",
-                "content": "No exams found matching your criteria."
-            }
+            return f"""
+            No Exams Found
+            There are currently no exams matching your criteria.
+            """
         
         exam_data = []
         for exam in exams:
+            # Handle room display - show all rooms if available
             rooms = ", ".join(exam.get('roomNumbers', [])) if exam.get('roomNumbers') else "Not assigned"
             
             exam_data.append({
-                'course': f"{exam['courseName']} ({exam['courseCode']})",
-                'type': exam['examType'],
-                'date': exam['examDate'],
-                'time': f"{exam['startTime']} - {exam['endTime']}",
-                'rooms': rooms,
-                'semester': exam.get('semester', 'N/A'),
-                'department': exam.get('department', 'N/A')
+                'Course': f"{exam['courseName']} ({exam['courseCode']})",
+                'Type': exam['examType'],
+                'Date': exam['examDate'],
+                'Time': f"{exam['startTime']} - {exam['endTime']}",
+                'Rooms': rooms,
+                'Semester': exam.get('semester', 'N/A'),
+                'Department': exam.get('department', 'N/A')
             })
         
-        return {
-            "type": "table",
-            "title": title,
-            "headers": ["Course", "Type", "Date", "Time", "Rooms", "Semester", "Department"],
-            "data": exam_data
-        }
+        df = pd.DataFrame(exam_data)
+        return f"{title}\n{df.to_string(index=False)}"
     
     def show_grades(self, grades):
         if not grades:
-            return {
-                "type": "text",
-                "content": f"No grades found for {self.student_name}. Please contact your instructor for more information."
-            }
+            return f"""
+            No grades found for {self.student_name}
+            Possible reasons:
+            - No courses graded yet
+            - You are not registered in any courses
+            
+            Please contact your instructor for more information.
+            """
         
         grades_list = []
         for grade in grades:
             grades_list.append({
-                'course': grade['courseName'],
-                'code': grade['courseCode'],
-                'score': grade['score'],
-                'grade': grade['grade'],
-                'term': grade['term'],
-                'date': grade['dateGraded'].strftime('%Y-%m-%d') if isinstance(grade['dateGraded'], datetime) else grade['dateGraded']
+                'Course': grade['courseName'],
+                'Code': grade['courseCode'],
+                'Score': grade['score'],
+                'Grade': grade['grade'],
+                'Term': grade['term'],
+                'Date': grade['dateGraded'].strftime('%Y-%m-%d') if isinstance(grade['dateGraded'], datetime) else grade['dateGraded']
             })
         
-        return {
-            "type": "table",
-            "title": "Grades",
-            "headers": ["Course", "Code", "Score", "Grade", "Term", "Date"],
-            "data": grades_list
-        }
+        df = pd.DataFrame(grades_list)
+        return df.to_string(index=False)
     
     def show_doctor_info(self, doctor, course=None):
-        courses_taught = list(self.courses.find({"doctorId": doctor['id']}))
-        courses_list = []
-        for c in courses_taught:
-            if course and c['code'] == course['code']:
-                continue
-            courses_list.append({
-                'code': c['code'],
-                'name': c['name']
-            })
+        response = f"""
+        {course['name'] if course else 'Doctor Information'}
+        Name: {doctor['name']}
+        Email: {doctor.get('email', 'N/A')}
+        """
         
-        return {
-            "type": "doctor_info",
-            "title": course['name'] if course else 'Doctor Information',
-            "data": {
-                "name": doctor['name'],
-                "email": doctor.get('email', 'N/A'),
-                "courses": courses_list
-            }
-        }
+        # Get all courses taught by this doctor
+        courses_taught = list(self.courses.find({"doctorId": doctor['id']}))
+        if courses_taught:
+            response += "\nCourses Teaching:\n"
+            for c in courses_taught:
+                if course and c['code'] == course['code']:
+                    continue  # Skip if it's the current course
+                response += f"- {c['code']}: {c['name']}\n"
+        
+        return response
     
     def show_course_detail(self, course):
         if not course:
-            return {"type": "text", "content": "Course not found."}
+            return "Course not found."
         
         doctor = self.users.find_one({"id": course['doctorId'], "role": "doctor"})
         if not doctor:
-            return {"type": "text", "content": f"Course found but could not find instructor with ID {course['doctorId']}"}
+            return f"Course found but could not find instructor with ID {course['doctorId']}"
         
-        lecture_sessions = []
-        for session in course.get('lectureSessions', []):
-            lecture_sessions.append({
-                'day': session['day'],
-                'time': f"{session['startTime']}-{session['endTime']}",
-                'room': session['room']
-            })
+        course_type = course.get('type', 'core').capitalize() if course.get('type') else 'Core'
         
-        sections = []
-        for section in course.get('sections', []):
-            ta_name = self.get_doctor_name(section['taId']) if 'taId' in section else "TA Not Assigned"
-            section_sessions = []
-            for session in section.get('sessions', []):
-                section_sessions.append({
-                    'day': session['day'],
-                    'time': f"{session['startTime']}-{session['endTime']}",
-                    'room': session['room']
-                })
-            sections.append({
-                'sectionId': section.get('sectionId', 'Unnamed Section'),
-                'ta': ta_name,
-                'sessions': section_sessions
-            })
+        details = f"""
+        {course['code']}: {course['name']}
+        Instructor: {doctor['name']}
+        Department: {course['department']}
+        Credit Hours: {course['creditHours']}
+        Semester: {course['semester']}
+        Type: {course_type}
+        """
         
-        return {
-            "type": "course_detail",
-            "data": {
-                "code": course['code'],
-                "name": course['name'],
-                "instructor": doctor['name'],
-                "department": course['department'],
-                "creditHours": course['creditHours'],
-                "semester": course['semester'],
-                "lectureSessions": lecture_sessions,
-                "sections": sections
-            }
-        }
+        # Show prerequisites if available
+        if 'prerequisites' in course and course['prerequisites']:
+            details += "\nPrerequisites:\n"
+            for prereq_code in course['prerequisites']:
+                prereq_course = self.courses.find_one({"code": prereq_code})
+                if prereq_course:
+                    details += f"- {prereq_course['name']} ({prereq_code})\n"
+                else:
+                    details += f"- {prereq_code}\n"
+        else:
+            details += "\nPrerequisites: None\n"
+        
+        # Add lecture sessions
+        if course.get('lectureSessions'):
+            details += "\nLecture Sessions:\n"
+            for session in course['lectureSessions']:
+                details += f"- {session['day']}: {session['startTime']}-{session['endTime']} (Room: {session['room']})\n"
+        
+        # Add sections
+        if course.get('sections'):
+            details += "\nSections:\n"
+            for section in course['sections']:
+                ta_name = self.get_doctor_name(section['taId']) if 'taId' in section else "TA Not Assigned"
+                details += f"\n{section.get('sectionId', 'Unnamed Section')} (TA: {ta_name})\n"
+                for session in section.get('sessions', []):
+                    details += f"- {session['day']}: {session['startTime']}-{session['endTime']} (Room: {session['room']})\n"
+        
+        return details
     
     def show_schedule(self, schedule):
         if not schedule:
-            return {
-                "type": "text",
-                "content": "No schedule found. You don't appear to be registered in any courses this semester. Please contact your academic advisor if this is incorrect."
-            }
+            return """
+            No Schedule Found
+            You don't appear to be registered in any courses this semester.
+            Please contact your academic advisor if this is incorrect.
+            """
         
-        return {
-            "type": "table",
-            "title": "Your Class Schedule",
-            "headers": ["Type", "Course", "Day", "Time", "Room", "Instructor", "Section"],
-            "data": schedule
-        }
+        # Convert to DataFrame for nice display
+        df = pd.DataFrame(schedule)
+        
+        # Group by day for better organization
+        days_order = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        df['Day'] = pd.Categorical(df['Day'], categories=days_order, ordered=True)
+        df = df.sort_values('Day')
+        
+        return f"Your Class Schedule\n{df.to_string(index=False)}"
     
-    def get_conversational_response(self, response_type, name=None):
-        """Get a conversational response"""
-        response = self.responses[response_type]
-        if name:
-            response = response.format(name=name)
-        return response
-
-    def normalize_query(self, query):
-        """Normalize the query by expanding common variations"""
-        query_lower = query.lower().strip()
-        
-        # Check for help-related queries
-        if any(word in query_lower for word in self.keyword_variations['help']):
-            return 'help'
-            
-        # Expand variations to their main keywords
-        for main_keyword, variations in self.keyword_variations.items():
-            if any(var in query_lower for var in variations):
-                return main_keyword
+    def chat(self):
+        while True:
+            user_input = input("\nYou: ").strip()
+            if user_input.lower() in ['exit', 'quit']:
+                print(f"\nGoodbye {self.student_name}!")
+                break
                 
-        return query_lower
+            response = self.process_query(user_input)
+            print(f"\nBot:\n{response}")
 
-    def process_query(self, query):
-        """Process user query and return response"""
-        # Normalize the query
-        normalized_query = self.normalize_query(query)
-        
-        # Handle help request
-        if normalized_query == 'help':
-            return self.get_conversational_response('help')
-        
-        # Handle different types of queries
-        if normalized_query == 'announcement':
-            announcements = self.get_announcements()
-            response = self.show_announcements(announcements)
-            if isinstance(response, dict) and response.get('type') == 'text' and 'No announcements found' in response['content']:
-                return self.get_conversational_response('no_data')
-            return response
-            
-        elif normalized_query == 'complaint':
-            complaints = self.get_complaints(user_id=self.student_id)
-            response = self.show_complaints(complaints)
-            if isinstance(response, dict) and response.get('type') == 'text' and 'No complaints found' in response['content']:
-                return self.get_conversational_response('no_data')
-            return response
-            
-        elif normalized_query == 'course':
-            if 'teach' in query.lower() or 'instructor' in query.lower() or 'professor' in query.lower():
-                courses = self.get_courses_by_name(query)
-                if courses:
-                    return self.show_doctor_info(courses[0])
-                return self.get_conversational_response('no_data')
-            else:
-                courses = self.get_student_courses_from_registered(self.student_id)
-                response = self.show_courses(courses, "Your Courses")
-                if isinstance(response, dict) and response.get('type') == 'text' and 'No courses found' in response['content']:
-                    return self.get_conversational_response('no_data')
-                return response
-                
-        elif normalized_query == 'exam':
-            exams = self.get_exams(upcoming=True)
-            response = self.show_exams(exams, "Upcoming Exams")
-            if isinstance(response, dict) and response.get('type') == 'text' and 'No exams found' in response['content']:
-                return self.get_conversational_response('no_data')
-            return response
-            
-        elif normalized_query == 'grade':
-            grades = self.get_grades(student_id=self.student_id)
-            response = self.show_grades(grades)
-            if isinstance(response, dict) and response.get('type') == 'text' and 'No grades found' in response['content']:
-                return self.get_conversational_response('no_data')
-            return response
-            
-        elif normalized_query == 'schedule':
-            schedule = self.get_student_schedule(self.student_id)
-            response = self.show_schedule(schedule)
-            if isinstance(response, dict) and response.get('type') == 'text' and 'No schedule found' in response['content']:
-                return self.get_conversational_response('no_data')
-            return response
-            
-        else:
-            return self.get_conversational_response('not_understood')
-
-# Create a single instance of the chatbot
-chatbot = CollegeSystemChatbot()
-
-@app.route('/initialize', methods=['POST'])
-def initialize():
-    data = request.get_json()
-    student_id = data.get('student_id')
-    if not student_id:
-        return jsonify({'success': False, 'message': 'Student ID is required'})
-    
-    success, message = chatbot.initialize_student(student_id)
-    return jsonify({'success': success, 'message': message})
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    data = request.get_json()
-    query = data.get('query')
-    if not query:
-        return jsonify({'success': False, 'message': 'Query is required'})
-    
-    if not chatbot.student_id:
-        return jsonify({'success': False, 'message': 'Please initialize the chatbot with a student ID first'})
-    
-    response = chatbot.process_query(query)
-    return jsonify({'success': True, 'response': response})
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+if __name__ == "__main__":
+    chatbot = CollegeSystemChatbot()
+    chatbot.chat()
