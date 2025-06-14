@@ -97,7 +97,7 @@ const Profile = () => {
       const response = await fetch(
         `${BASE_URL}/api/auth/update-profile-picture/${user.id}`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             Authorization: `Bearer ${authToken}`,
           },
