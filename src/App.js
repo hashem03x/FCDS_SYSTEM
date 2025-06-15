@@ -32,6 +32,7 @@ import ExamsTable from "./pages/Student/Exams";
 import Attendance from "./pages/Student/Attendance";
 import StudentComplaints from "./pages/Student/Complaints";
 import Profile from "./pages/Student/Profile";
+import Chat from "./pages/Student/Chat/Chat";
 
 // Doctor Pages
 import DoctorLayout from "./pages/Doctor/DoctorLayout";
@@ -107,6 +108,7 @@ const App = React.memo(() => {
         <Route path="exams-table" element={<ExamsTable />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="complaints" element={<StudentComplaints />} />
+        <Route path="chat" element={<Chat />} />
         <Route path="profile" element={<Profile />} />
       </Route>
     ),

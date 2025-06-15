@@ -135,6 +135,7 @@ export default function MiniDrawer() {
       name: "Complaints",
       icon: faExclamation,
     },
+
     {
       path: "/student/profile",
       name: "Profile",
@@ -230,11 +231,11 @@ export default function MiniDrawer() {
         )}
         <List>
           {["Messages"].map((text) => {
-            const isActive = location.pathname === "/student/messages";
+            const isActive = location.pathname === "/student/chat";
             return (
               <ListItem key={text} disablePadding sx={{ display: "block" }}>
                 <ListItemButton
-                  onClick={() => navigate("/student/messages")}
+                  onClick={() => navigate("/student/chat")}
                   sx={[
                     {
                       minHeight: 48,
