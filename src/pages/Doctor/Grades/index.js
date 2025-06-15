@@ -125,8 +125,10 @@ function Grades() {
     if (courseCode) {
       try {
         setLoadingGrades(true);
-        const response = await fetch(
-          `${BASE_URL}/api/gpa/courses/${courseCode}/grades`,
+        
+        // Fetch midterm grades
+        const midtermResponse = await fetch(
+          `${BASE_URL}/api/gpa/${courseCode}/midterm`,
           {
             method: "GET",
             headers: {
@@ -135,16 +137,39 @@ function Grades() {
           }
         );
 
-        if (!response.ok) {
+        // Fetch work grades
+        const workResponse = await fetch(
+          `${BASE_URL}/api/gpa/${courseCode}/work`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+
+        // Fetch final grades
+        const finalResponse = await fetch(
+          `${BASE_URL}/api/gpa/${courseCode}/final`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+
+        if (!midtermResponse.ok || !workResponse.ok || !finalResponse.ok) {
           throw new Error("Failed to fetch grades");
         }
 
-        const result = await response.json();
-        if (result.success) {
-          setCourseGrades(result.data || []);
-        } else {
-          throw new Error(result.message || "Failed to fetch grades");
-        }
+        const midtermData = await midtermResponse.json();
+        const workData = await workResponse.json();
+        const finalData = await finalResponse.json();
+
+        // Process and combine the grades
+        const combinedGrades = processGrades(midtermData.data, workData.data, finalData.data, courseCode);
+        setCourseGrades(combinedGrades);
       } catch (error) {
         setGradesError(error.message || "Failed to fetch grades");
         Swal.fire("Error", error.message || "Failed to fetch grades", "error");
@@ -152,6 +177,90 @@ function Grades() {
         setLoadingGrades(false);
       }
     }
+  };
+
+  const processGrades = (midtermGrades, workGrades, finalGrades, courseCode) => {
+    const combinedGrades = {};
+    
+    // Process midterm grades
+    midtermGrades.forEach(grade => {
+      if (!combinedGrades[grade.studentId]) {
+        combinedGrades[grade.studentId] = {
+          studentId: grade.studentId,
+          courseCode: courseCode,
+          components: {
+            midterm: { score: grade.score, maxScore: grade.maxScore },
+            work: { score: 0, maxScore: 30 },
+            final: { score: 0, maxScore: 50 }
+          }
+        };
+      } else {
+        combinedGrades[grade.studentId].components.midterm = {
+          score: grade.score,
+          maxScore: grade.maxScore
+        };
+      }
+    });
+
+    // Process work grades
+    workGrades.forEach(grade => {
+      if (!combinedGrades[grade.studentId]) {
+        combinedGrades[grade.studentId] = {
+          studentId: grade.studentId,
+          courseCode: courseCode,
+          components: {
+            midterm: { score: 0, maxScore: 20 },
+            work: { score: grade.score, maxScore: grade.maxScore },
+            final: { score: 0, maxScore: 50 }
+          }
+        };
+      } else {
+        combinedGrades[grade.studentId].components.work = {
+          score: grade.score,
+          maxScore: grade.maxScore
+        };
+      }
+    });
+
+    // Process final grades
+    finalGrades.forEach(grade => {
+      if (!combinedGrades[grade.studentId]) {
+        combinedGrades[grade.studentId] = {
+          studentId: grade.studentId,
+          courseCode: courseCode,
+          components: {
+            midterm: { score: 0, maxScore: 20 },
+            work: { score: 0, maxScore: 30 },
+            final: { score: grade.score, maxScore: grade.maxScore }
+          }
+        };
+      } else {
+        combinedGrades[grade.studentId].components.final = {
+          score: grade.score,
+          maxScore: grade.maxScore
+        };
+      }
+    });
+
+    // Calculate total scores and grades
+    return Object.values(combinedGrades).map(grade => {
+      const totalScore = 
+        (grade.components.midterm.score / grade.components.midterm.maxScore * 20) +
+        (grade.components.work.score / grade.components.work.maxScore * 30) +
+        (grade.components.final.score / grade.components.final.maxScore * 50);
+
+      let gradeLetter = 'F';
+      if (totalScore >= 90) gradeLetter = 'A';
+      else if (totalScore >= 80) gradeLetter = 'B';
+      else if (totalScore >= 70) gradeLetter = 'C';
+      else if (totalScore >= 60) gradeLetter = 'D';
+
+      return {
+        ...grade,
+        totalScore: Math.round(totalScore * 100) / 100,
+        grade: gradeLetter
+      };
+    });
   };
 
   const handleOpenModal = () => {
@@ -233,7 +342,7 @@ function Grades() {
 
       if (result.isConfirmed) {
         const response = await fetch(
-          `${BASE_URL}/api/gpa/delete-grade/${studentId}/${courseCode}`,
+          `${BASE_URL}/api/gpa/${courseCode}/${studentId}/midterm`,
           {
             method: "DELETE",
             headers: {
@@ -243,15 +352,43 @@ function Grades() {
         );
 
         if (!response.ok) {
-          throw new Error("Failed to delete grade");
+          throw new Error("Failed to delete midterm grade");
         }
 
-        Swal.fire("Deleted!", "Grade has been deleted.", "success");
+        const workResponse = await fetch(
+          `${BASE_URL}/api/gpa/${courseCode}/${studentId}/work`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+
+        if (!workResponse.ok) {
+          throw new Error("Failed to delete work grade");
+        }
+
+        const finalResponse = await fetch(
+          `${BASE_URL}/api/gpa/${courseCode}/${studentId}/final`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+
+        if (!finalResponse.ok) {
+          throw new Error("Failed to delete final grade");
+        }
+
+        Swal.fire("Deleted!", "Grades have been deleted.", "success");
         // Refresh the grades list
         handleCourseChange({ target: { value: selectedCourse } });
       }
     } catch (error) {
-      Swal.fire("Error", error.message || "Failed to delete grade", "error");
+      Swal.fire("Error", error.message || "Failed to delete grades", "error");
     }
   };
 
@@ -272,26 +409,70 @@ function Grades() {
         }
       }
 
-      const url = isEditing
-        ? `${BASE_URL}/api/gpa/update-grade/${gradeData.studentId}/${gradeData.courseCode}`
-        : `${BASE_URL}/api/gpa/add-grade/${gradeData.courseCode}`;
+      // Submit each component grade separately
+      const submitPromises = [];
 
-      const response = await fetch(url, {
-        method: isEditing ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify(gradeData),
-      });
+      // Submit midterm grade
+      if (gradeData.components.midterm.score) {
+        submitPromises.push(
+          fetch(`${BASE_URL}/api/gpa/${gradeData.courseCode}/${gradeData.studentId}/midterm`, {
+            method: isEditing ? "PUT" : "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+              score: parseFloat(gradeData.components.midterm.score),
+              maxScore: gradeData.components.midterm.maxScore
+            }),
+          })
+        );
+      }
 
-      if (!response.ok) {
-        throw new Error("Failed to add/update grade");
+      // Submit work grade
+      if (gradeData.components.work.score) {
+        submitPromises.push(
+          fetch(`${BASE_URL}/api/gpa/${gradeData.courseCode}/${gradeData.sectionId}/${gradeData.studentId}/work`, {
+            method: isEditing ? "PUT" : "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+              score: parseFloat(gradeData.components.work.score),
+              maxScore: gradeData.components.work.maxScore
+            }),
+          })
+        );
+      }
+
+      // Submit final grade
+      if (gradeData.components.final.score) {
+        submitPromises.push(
+          fetch(`${BASE_URL}/api/gpa/${gradeData.courseCode}/${gradeData.studentId}/final`, {
+            method: isEditing ? "PUT" : "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+              score: parseFloat(gradeData.components.final.score),
+              maxScore: gradeData.components.final.maxScore
+            }),
+          })
+        );
+      }
+
+      const responses = await Promise.all(submitPromises);
+      const hasError = responses.some(response => !response.ok);
+
+      if (hasError) {
+        throw new Error("Failed to add/update one or more grades");
       }
 
       Swal.fire(
         "Success",
-        isEditing ? "Grade updated successfully" : "Grade added successfully",
+        isEditing ? "Grades updated successfully" : "Grades added successfully",
         "success"
       );
       handleCloseModal();
@@ -299,7 +480,7 @@ function Grades() {
       // Refresh grades after adding/updating grade
       handleCourseChange({ target: { value: selectedCourse } });
     } catch (error) {
-      Swal.fire("Error", error.message || "Failed to add/update grade", "error");
+      Swal.fire("Error", error.message || "Failed to add/update grades", "error");
     }
   };
 
