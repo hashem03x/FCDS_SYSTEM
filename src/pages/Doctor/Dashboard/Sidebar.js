@@ -129,11 +129,6 @@ export default function MiniDrawer() {
       name: "Complaints",
       icon: faExclamationTriangle,
     },
-    {
-      path: "/doctor/settings",
-      name: "Settings",
-      icon: faGear,
-    },
   ];
 
   return (
