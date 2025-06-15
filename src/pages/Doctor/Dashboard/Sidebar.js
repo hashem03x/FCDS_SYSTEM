@@ -25,6 +25,7 @@ import {
   faUserGraduate,
   faCalendarAlt,
   faChalkboardTeacher,
+  faClipboardCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ListItemIcon, Typography } from "@mui/material";
@@ -109,29 +110,19 @@ export default function MiniDrawer() {
       icon: faHouse,
     },
     {
-      path: "/doctor/courses",
-      name: "Courses",
-      icon: faBook,
-    },
-    {
-      path: "/doctor/lectures",
-      name: "Lectures",
-      icon: faChalkboardTeacher,
-    },
-    {
       path: "/doctor/schedule",
       name: "Schedule",
       icon: faCalendarAlt,
     },
     {
-      path: "/doctor/students",
-      name: "Students",
-      icon: faUsers,
-    },
-    {
       path: "/doctor/grades",
       name: "Grades",
       icon: faLayerGroup,
+    },
+    {
+      path: "/doctor/attendance",
+      name: "Attendance",
+      icon: faClipboardCheck,
     },
     {
       path: "/doctor/complaints",

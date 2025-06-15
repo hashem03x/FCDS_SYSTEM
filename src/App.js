@@ -44,6 +44,8 @@ import DoctorSettings from "./pages/Doctor/Settings";
 import DoctorLectures from "./pages/Doctor/Lectures";
 import DoctorComplaints from "./pages/Doctor/Complaints";
 import SystemSettings from "./pages/Admin/SystemSettings/SystemSettings";
+import Schedule from "./pages/Doctor/Schedule/Schedule";
+import DoctorAttendance from "./pages/Doctor/Attendance/Attendance";
 
 // Memoized route components
 const MemoizedLogin = React.memo(Login);
@@ -132,8 +134,9 @@ const App = React.memo(() => {
         <Route path="students" element={<DoctorStudents />} />
         <Route path="grades" element={<DoctorGrades />} />
         <Route path="settings" element={<DoctorSettings />} />
-        <Route path="lectures" element={<DoctorLectures />} />
         <Route path="complaints" element={<DoctorComplaints />} />
+        <Route path="schedule" element={<Schedule />} />
+        <Route path="attendance" element={<DoctorAttendance />} />
       </Route>
     ),
     []

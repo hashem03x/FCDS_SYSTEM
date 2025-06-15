@@ -41,13 +41,16 @@ import {
   faSearch,
   faTrophy,
   faMedal,
+  faUpload,
 } from "@fortawesome/free-solid-svg-icons";
+import UploadGradesModal from "./UploadGradesModal";
 
 function Grades() {
   const { courses, isLoading, error } = useDoctor();
   const { authToken } = useAuth();
   const [selectedCourse, setSelectedCourse] = useState("");
   const [openModal, setOpenModal] = useState(false);
+  const [openUploadModal, setOpenUploadModal] = useState(false);
   const [gradeData, setGradeData] = useState({
     studentId: "",
     courseCode: "",
@@ -126,9 +129,8 @@ function Grades() {
       try {
         setLoadingGrades(true);
         
-        // Fetch midterm grades
-        const midtermResponse = await fetch(
-          `${BASE_URL}/api/gpa/${courseCode}/midterm`,
+        const response = await fetch(
+          `https://college-system-two.vercel.app/api/gpa/courses/${courseCode}/grades`,
           {
             method: "GET",
             headers: {
@@ -137,39 +139,16 @@ function Grades() {
           }
         );
 
-        // Fetch work grades
-        const workResponse = await fetch(
-          `${BASE_URL}/api/gpa/${courseCode}/work`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-
-        // Fetch final grades
-        const finalResponse = await fetch(
-          `${BASE_URL}/api/gpa/${courseCode}/final`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-
-        if (!midtermResponse.ok || !workResponse.ok || !finalResponse.ok) {
+        if (!response.ok) {
           throw new Error("Failed to fetch grades");
         }
 
-        const midtermData = await midtermResponse.json();
-        const workData = await workResponse.json();
-        const finalData = await finalResponse.json();
-
-        // Process and combine the grades
-        const combinedGrades = processGrades(midtermData.data, workData.data, finalData.data, courseCode);
-        setCourseGrades(combinedGrades);
+        const data = await response.json();
+        if (data.success) {
+          setCourseGrades(data.data);
+        } else {
+          throw new Error(data.message || "Failed to fetch grades");
+        }
       } catch (error) {
         setGradesError(error.message || "Failed to fetch grades");
         Swal.fire("Error", error.message || "Failed to fetch grades", "error");
@@ -603,16 +582,10 @@ function Grades() {
           <Button
             variant="contained"
             color="secondary"
-            component="label"
-            disabled={!selectedCourse || uploading}
+            startIcon={<FontAwesomeIcon icon={faUpload} />}
+            onClick={() => setOpenUploadModal(true)}
           >
-            {uploading ? "Uploading..." : "Upload Grades File"}
-            <input
-              type="file"
-              hidden
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
-            />
+            Upload Grades
           </Button>
         </Stack>
       </Box>
@@ -795,6 +768,11 @@ function Grades() {
           </TableContainer>
         </>
       )}
+
+      <UploadGradesModal
+        open={openUploadModal}
+        handleClose={() => setOpenUploadModal(false)}
+      />
 
       <Dialog open={openModal} onClose={handleCloseModal} maxWidth="md" fullWidth>
         <DialogTitle>

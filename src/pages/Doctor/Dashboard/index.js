@@ -16,10 +16,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const {user} = useAuth();
   const pages = [
-    { label: "Students", path: "/doctor/students" },
+    { label: "Schedule", path: "/doctor/schedule" },
     { label: "Attendance", path: "/doctor/attendance" },
     { label: "Grades", path: "/doctor/grades" },
-    { label: "Lectures", path: "/doctor/lectures" },
     { label: "Complaints", path: "/doctor/complaints" },
   ];
 
